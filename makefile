@@ -4,8 +4,11 @@ original:
 schur:
 	cd makevars/schur/ &&\
 	R CMD SHLIB ../../src/*.cpp ../../src/*.c -o ../../fdaPDE_schur.so
-mumps:
-	cd makevars/mumps/ &&\
-	R CMD SHLIB ../../src/*.cpp ../../src/*.c -o ../../fdaPDE_MUMPS.so
+mumps_pord:
+	cd makevars/mumps_pord/ &&\
+	R CMD SHLIB ../../src/*.cpp ../../src/*.c -o ../../fdaPDE_MUMPS_PORD.so
+mumps_scotch:
+	cd makevars/mumps_scotch/ &&\
+	R CMD SHLIB ../../src/*.cpp ../../src/*.c -o ../../fdaPDE_MUMPS_SCOTCH.so
 clean:
 	rm src/*.o
