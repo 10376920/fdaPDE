@@ -318,7 +318,7 @@ R_smooth.FEM.basis = function(locations, observations, FEMbasis, lambda, covaria
     # solve system
     bigsol[[1]][,i] = solve(A,b)
     if(GCV == TRUE)
-    {
+    { time_a = proc.time()
       S = solve(Lmat + lambda[i] * K1 %*% solve(K0) %*% K1)
       if(is.null(locations))
       {
@@ -337,6 +337,8 @@ R_smooth.FEM.basis = function(locations, observations, FEMbasis, lambda, covaria
           bigsol[[2]][i]  = ncol(covariates)+sum(diag(basismat%*%S[1:numnodes,1:numnodes]%*%t(basismat)%*%Q))
         }
       }
+      time_b = proc.time()
+      print(time_b-time_a)
     }else{
       bigsol[[2]][i]  = NA
     }
