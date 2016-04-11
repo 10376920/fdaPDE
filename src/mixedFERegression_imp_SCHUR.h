@@ -331,8 +331,9 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::getRightHandData(VectorXr
 template<typename InputHandler, typename Integrator, UInt ORDER>
 void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(UInt output_index, Real lambda)
 {
-   	timer clock;
+   	timer clock,clock1,clock2,clock3,clock4,clock5;
 	clock.start();
+	clock1.start();
 
 	UInt nnodes = mesh_.num_nodes();
 	UInt nlocations = regressionData_.getNumberofObservations();
@@ -341,8 +342,20 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(U
     
     solver.compute(MMat_);
     SpMat U = solver.solve(AMat_);
+    std::cout << "matrice A dimensioni: " << std::endl;
+    std::cout << "Righe " << AMat_.rows() << "     Colonne " << AMat_.cols() << std::endl;
+    std::cout << "Non zeri " << AMat_.nonZeros() << std::endl;
+    std::cout << "inversione di A" << std::endl;
+    clock1.stop();
+    clock2.start();
     SpMat T = DMat_ + lambda*AMat_.transpose()*U;
-    solver.compute(T);
+
+    MatrixXr Td = MatrixXr(T);
+	Eigen::LLT<MatrixXr> Dsolver(Td);
+
+    //solver.compute(T);
+    std::cout << "Decomposizione di T" << std::endl;
+    clock2.stop();
 	Real degrees=0;
     if(regressionData_.isLocationsByNodes()) {
         auto k = regressionData_.getObservationsIndices();
@@ -365,8 +378,18 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(U
             }
         }
         // Solve the system TX = B
+        clock4.start();
         MatrixXr X;
-        X = solver.solve(B);
+
+        X=Dsolver.solve(B);
+
+
+        //X = solver.solve(B);
+        std::cout << "Risoluzione del sistema TX=B" << std::endl;
+        std::cout << "matrice T dimensioni: " << std::endl;
+        std::cout << "Righe " << T.rows() << "     Colonne " << T.cols() << std::endl;
+        std::cout << "Non zeri " << T.nonZeros() << std::endl;
+        clock4.stop();
         // Compute trace(X(k,:))
         for (int i = 0; i < k.size(); ++i) {
             degrees += X(k[i], i);
@@ -383,6 +406,7 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(U
         }
     }
     _dof[output_index] = degrees;
+    std::cout << "clock finale" << std::endl;
     clock.stop();
 }
 
