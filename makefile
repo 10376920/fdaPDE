@@ -10,5 +10,8 @@ mumps_pord:
 mumps_scotch:
 	cd makevars/mumps_scotch/ &&\
 	R CMD SHLIB ../../src/*.cpp ../../src/*.c -o ../../fdaPDE_MUMPS_SCOTCH.so
+mumps_whole:
+	cd makevars/mumps_whole/ &&\
+	R CMD SHLIB ../../src/*.cpp ../../src/*.c -o ../../fdaPDE_MUMPS_whole.so
 clean:
 	rm src/*.o

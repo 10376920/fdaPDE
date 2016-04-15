@@ -114,4 +114,7 @@ class MixedFERegression{
 #include "mixedFERegression_imp_MUMPS.h"
 #endif
 
+#ifdef MUMPS_WHOLE_VERSION
+#include "mixedFERegression_imp_mumps_whole.h"
+#endif
 #endif

@@ -1,0 +1,7 @@
+PKG_CPPFLAGS = -I../../Eigen -I../../MUMPS_4.10.0_pord/include -I../../MUMPS_4.10.0_pord/libseq -D MUMPS_WHOLE_VERSION
+PKG_CXXFLAGS = -std=c++11
+PKG_LIBS = ../../MUMPS_4.10.0_pord/lib/libdmumps.a ../../MUMPS_4.10.0_pord/lib/libmumps_common.a ../../MUMPS_4.10.0_pord/lib/libpord.a ../../MUMPS_4.10.0_pord/libseq/libmpiseq.a -lpthread
+
+ 
+
+
