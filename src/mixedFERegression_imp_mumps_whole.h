@@ -337,157 +337,167 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::getRightHandData(VectorXr
 template<typename InputHandler, typename Integrator, UInt ORDER>
 void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(UInt output_index, Real lambda)
 {
-    timer clock;
+   	timer clock,clock1,clock2,clock3,clock4,clock5;
 	clock.start();
-    std::cout << "Starting GCV computation" << std::endl;
-
-	UInt nnodes = mesh_.num_nodes();
+	clock1.start();
+    UInt nnodes = mesh_.num_nodes();
 	UInt nlocations = regressionData_.getNumberofObservations();
+    Real degrees=0;
 
-	Eigen::SparseLU<SpMat> solver;
-//	solver.compute(_coeffmatrix);
-	SpMat I(_coeffmatrix.rows(),_coeffmatrix.cols());
-	I.setIdentity();
-	SpMat coeff_inv;// = solver.solve(I);
-	Real degrees=0;
+    //if caso bello bello
+    if (regressionData_.isLocationsByNodes() && regressionData_.getCovariates().rows() == 0 )
+    {
+        auto k = regressionData_.getObservationsIndices();
+        DMUMPS_STRUC_C id;
+        int myid, ierr;
+        int argc=0;
+        char ** argv= NULL;
+        MPI_Init(&argc,&argv);
+        ierr = MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
-	if(regressionData_.getCovariates().rows() == 0)
-	{
-		if(regressionData_.isLocationsByNodes())
-		{
-		    auto k = regressionData_.getObservationsIndices();
-		    DMUMPS_STRUC_C id;
-        	int myid, ierr;
-        	int argc=0;
-        	char ** argv= NULL;
-        	MPI_Init(&argc,&argv);
-        	ierr = MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+        id.sym=0;
+        id.par=1;
+        id.job=JOB_INIT;
+        id.comm_fortran=USE_COMM_WORLD;
+        dmumps_c(&id);
 
-        	id.sym=0;
-        	id.par=1;
-        	id.job=JOB_INIT;
-        	id.comm_fortran=USE_COMM_WORLD;
-        	dmumps_c(&id);
-
-        	std::vector<int> irn;
-        	std::vector<int> jcn;
-        	std::vector<double> a;
-        	std::vector<int> irhs_ptr;
-        	std::vector<int> irhs_sparse;
-        	//std::vector<double> rhs_sparse(nlocations);
-        	double* rhs_sparse= (double*)malloc(nlocations*sizeof(double));
-            if( myid==0){
-        		id.n=2*nnodes;
-        		id.nz=_coeffmatrix.nonZeros();
-        		for (int j=0; j<_coeffmatrix.outerSize(); ++j){
-        			for (SpMat::InnerIterator it(_coeffmatrix,j); it; ++it){
-        				irn.push_back(it.row()+1);
-        				jcn.push_back(it.col()+1);
-        				a.push_back(it.value());
-        			}
-        		}
-            }
-            id.irn=irn.data();
-        	id.jcn=jcn.data();
-        	id.a=a.data();
-            id.nz_rhs=nlocations;
-        	id.nrhs=2*nnodes;
-        	int j = 1;
-        	irhs_ptr.push_back(j);
-        	for (int l=0; l<k[0]-1; ++l) {
-        	    irhs_ptr.push_back(j);
-        	}
-            for (int i=0; i<k.size()-1; ++i) {
-                ++j;
-                for (int l=0; l<k[i+1]-k[i]; ++l) {
-                    irhs_ptr.push_back(j);
+        std::vector<int> irn;
+        std::vector<int> jcn;
+        std::vector<double> a;
+        std::vector<int> irhs_ptr;
+        std::vector<int> irhs_sparse;
+        double* rhs_sparse= (double*)malloc(nlocations*sizeof(double));
+        
+        if( myid==0){
+            id.n=2*nnodes;
+            id.nz=_coeffmatrix.nonZeros();
+            for (int j=0; j<_coeffmatrix.outerSize(); ++j){
+                for (SpMat::InnerIterator it(_coeffmatrix,j); it; ++it){
+                    irn.push_back(it.row()+1);
+                    jcn.push_back(it.col()+1);
+                    a.push_back(it.value());
                 }
-        	}
-        	++j;
-        	for (int i=k[k.size()-1]; i < id.nrhs; ++i) {
-        	    irhs_ptr.push_back(j);
-        	}
-        	/*for (int i=0; i<irhs_ptr.size(); ++i) {
-        	    std::cout << i+1 << ": " << irhs_ptr[i] << std::endl;
-        	}*/
-        	for (int i=0; i<nlocations; ++i){
-        		irhs_sparse.push_back(k[i]+1);
-        	}
-        	id.irhs_sparse=irhs_sparse.data();
-        	id.irhs_ptr=irhs_ptr.data();
-        	id.rhs_sparse=rhs_sparse;
-#define ICNTL(I) icntl[(I)-1]
-        	id.ICNTL(1)=6;
-        	id.ICNTL(2)=6;
-        	id.ICNTL(3)=6;
-        	id.ICNTL(4)=2;
-        	id.ICNTL(5)=0;
-        	id.ICNTL(18)=0;
-        	id.ICNTL(20)=1;
-        	id.ICNTL(30)=1;
+            }
+        }
+        id.irn=irn.data();
+        id.jcn=jcn.data();
+        id.a=a.data();
+        id.nz_rhs=nlocations;
+        id.nrhs=2*nnodes;
+        int j = 1;
+        irhs_ptr.push_back(j);
+        for (int l=0; l<k[0]-1; ++l) {
+            irhs_ptr.push_back(j);
+        }
+        for (int i=0; i<k.size()-1; ++i) {
+            ++j;
+            for (int l=0; l<k[i+1]-k[i]; ++l) {
+                irhs_ptr.push_back(j);
+            }
+        }
+        ++j;
+        for (int i=k[k.size()-1]; i < id.nrhs; ++i) {
+            irhs_ptr.push_back(j);
+        }
+        for (int i=0; i<nlocations; ++i){
+            irhs_sparse.push_back(k[i]+1);
+        }
+        id.irhs_sparse=irhs_sparse.data();
+        id.irhs_ptr=irhs_ptr.data();
+        id.rhs_sparse=rhs_sparse;
 
-        	id.job=6;
-        	dmumps_c(&id);
-        	id.job=JOB_END;
-        	dmumps_c(&id);
+        #define ICNTL(I) icntl[(I)-1]
+        id.ICNTL(1)=-1;
+        id.ICNTL(2)=-1;
+        id.ICNTL(3)=-1;
+        id.ICNTL(4)=0;
+        id.ICNTL(5)=0;
+        id.ICNTL(18)=0;
+        id.ICNTL(20)=1;
+        id.ICNTL(30)=1;
 
-        	if (myid==0){
-        		//std::cout << "la soluzione è " << std::endl;
-        		for (int i=0; i< nlocations; ++i){
-        			degrees+=rhs_sparse[i];
-        		}
-        	}
-        	free(rhs_sparse);
+        id.job=6;
+        dmumps_c(&id);
+        id.job=JOB_END;
+        dmumps_c(&id);
 
-        	MPI_Finalize();
-        	
-		}
-		else
-		{
-			MatrixXr An(coeff_inv.topLeftCorner(nnodes, nnodes));
-			MatrixXr S = psi_*An*psi_.transpose();
-			for (auto i=0; i<nlocations;++i)
-			{
-				degrees+=S(i,i);
-			}
-		}
-	}
-	else
-	{	//Important
-		degrees = regressionData_.getCovariates().cols();
+        if (myid==0){
+            //std::cout << "la soluzione è " << std::endl;
+            for (int i=0; i< nlocations; ++i){
+                degrees+=rhs_sparse[i];
+            }
+        }
+        free(rhs_sparse);
 
-		if(regressionData_.isLocationsByNodes())
-		{
-			MatrixXr S(coeff_inv);
+        MPI_Finalize();
 
-			for (auto i=0; i<nlocations;++i)
-			{
-				auto index_i = regressionData_.getObservationsIndices()[i];
-				for (auto j=0; j<nlocations;++j)
-				{
-					auto index_j = regressionData_.getObservationsIndices()[j];
+    }    
+    else{ //non siamo nel caso 4 => montare i solver   
 
-					degrees+=S(index_i,index_j)*Q_(j,i);
-				}
-			}
+        Eigen::SparseLU<SpMat> solver;
+        solver.compute(MMat_);
+        SpMat U = solver.solve(AMat_);
+        MatrixXr Ud = MatrixXr(U);
+        auto k = regressionData_.getObservationsIndices();
 
-		}
-		else
-		{
-			MatrixXr An(coeff_inv.topLeftCorner(nnodes, nnodes));
-			MatrixXr S = psi_*An*psi_.transpose()*Q_;
-			for (auto i=0; i<nlocations;++i)
-			{
-				degrees+=S(i,i);
-			}
-		}
-	}
+        /*
+        std::cout << "matrice A dimensioni: " << std::endl;
+        std::cout << "Righe " << AMat_.rows() << "     Colonne " << AMat_.cols() << std::endl;
+        std::cout << "Non zeri " << AMat_.nonZeros() << std::endl;
+        */
+        std::cout << " Fattorizzazione di MMat e Risoluzione RU=A" << std::endl;
+        clock1.stop();
+        clock2.start();
 
+        MatrixXr Td = MatrixXr(DMat_ + lambda*AMat_.transpose()*U);
+        Eigen::LLT<MatrixXr> Dsolver(Td);
+        
+        std::cout << "Fattorizzazione di T" << std::endl;
+        clock2.stop();
 
-	//std::cout<<"TRACE "<<degrees<<std::endl;
+        //caso 3)
+        if(regressionData_.isLocationsByNodes() && regressionData_.getCovariates().rows() != 0) {
+            // Setup rhs B
+            MatrixXr B;
+            B = MatrixXr::Zero(nnodes,nlocations);
+            degrees += regressionData_.getCovariates().cols();
+            // B = I(:,k) * Q
+            for (auto i=0; i<nlocations;++i) {
+                for (int j=0; j<nlocations; ++j) {
+                    B(k[i], j) = Q_(i,j);
+                }
+            }
+            // Solve the system TX = B
+            clock3.start();
+            MatrixXr X;
+            X=Dsolver.solve(B);
+            std::cout << "Risoluzione del sistema TX=B" << std::endl;
+            clock3.stop();
+            // Compute trace(X(k,:))
+            for (int i = 0; i < k.size(); ++i) {
+                degrees += X(k[i], i);
+            }
+        }
 
-	_dof[output_index] = degrees;
-	clock.stop();
+        //if casi 1) e 2)
+        if (!regressionData_.isLocationsByNodes()){
+            MatrixXr X;
+            clock4.start();
+            X = Dsolver.solve(MatrixXr(DMat_));
+            std::cout << "Risoluzione del sistema TX=D " << std::endl;
+            clock4.stop();
+            //solo in caso 1) con covariate
+            if (regressionData_.getCovariates().rows() != 0) {
+                degrees += regressionData_.getCovariates().cols();
+            }
+            for (int i = 0; i<nnodes; ++i) {
+                degrees += X(i,i);
+            }
+        }
+    }
+    _dof[output_index] = degrees;
+    std::cout << "Clock finale" << std::endl;
+    clock.stop();
 }
 
 

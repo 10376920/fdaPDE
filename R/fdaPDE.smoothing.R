@@ -403,8 +403,8 @@ getBetaCoefficients<-function(locations, observations, fit.FEM, covariates, CPP_
     }
     ## #row number of covariates, #col number of functions
     betahat = matrix(0, nrow = ncol(covariates), ncol = ncol(fnhat))
-    for(i in 1:ncol(fnhat))
-      betahat[i] = as.vector(lm.fit(covariates,as.vector(observations-fnhat[,i]))$coefficients)
+    #for(i in 1:ncol(fnhat))
+    #  betahat[i] = as.vector(lm.fit(covariates,as.vector(observations-fnhat[,i]))$coefficients)
   }
   
  return(betahat)
@@ -434,8 +434,8 @@ getGCV<-function(locations, observations, fit.FEM, covariates = NULL, edf)
     desmatprod = ( solve( t(covariates) %*% covariates ) ) %*% t(covariates)
     for ( i in 1:length(edf))
     {
-      betahat  = desmatprod %*% (observations-fnhat[,i])
-      zhat[,i]     = covariates %*% betahat + fnhat[,i]
+      #betahat  = desmatprod %*% (observations-fnhat[,i])
+      #zhat[,i]     = covariates %*% betahat + fnhat[,i]
     }
   }else{
     zhat = fnhat
