@@ -117,4 +117,9 @@ class MixedFERegression{
 #ifdef MUMPS_WHOLE_VERSION
 #include "mixedFERegression_imp_mumps_whole.h"
 #endif
+
+#ifdef STOCHASTIC_VERSION
+#include "mixedFERegression_imp_stochastic.h"
+#endif
+
 #endif

@@ -13,5 +13,8 @@ mumps_scotch:
 mumps_whole:
 	cd makevars/mumps_whole/ &&\
 	R CMD SHLIB ../../src/*.cpp ../../src/*.c -o ../../fdaPDE_MUMPS_whole.so
+stochastic:
+	cd makevars/stochastic/ &&\
+	R CMD SHLIB ../../src/*.cpp ../../src/*.c -o ../../fdaPDE_stochastic.so
 clean:
 	rm src/*.o
