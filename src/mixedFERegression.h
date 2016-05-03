@@ -34,15 +34,19 @@ class MixedFERegression{
 		std::vector<VectorXr> _solution;
 		std::vector<Real> _dof;
 
+		Eigen::PartialPivLU<MatrixXr> WTWinv_;
+		bool isWTWfactorized_;
+
 		void setPsi();
 		void setQ();
 		void setH();
 
 		void buildCoeffMatrix(const SpMat& DMat,  const SpMat& AMat,  const SpMat& MMat);
+		MatrixXr LeftMultiplybyQ(const MatrixXr& u);
 
 	public:
 		//!A Constructor.
-		MixedFERegression(const MeshHandler<ORDER>& mesh, const InputHandler& regressionData):mesh_(mesh), regressionData_(regressionData){};
+		MixedFERegression(const MeshHandler<ORDER>& mesh, const InputHandler& regressionData):mesh_(mesh), regressionData_(regressionData), isWTWfactorized_(false){};
 		
 		//!A Destructor
 		//~Model(){};
@@ -120,6 +124,10 @@ class MixedFERegression{
 
 #ifdef STOCHASTIC_VERSION
 #include "mixedFERegression_imp_stochastic.h"
+#endif
+
+#ifdef TEMP_VERSION
+#include "mixedFERegression_imp_temp.h"
 #endif
 
 #endif

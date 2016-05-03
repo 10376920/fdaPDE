@@ -16,5 +16,8 @@ mumps_whole:
 stochastic:
 	cd makevars/stochastic/ &&\
 	R CMD SHLIB ../../src/*.cpp ../../src/*.c -o ../../fdaPDE_stochastic.so
+temp:
+	cd makevars/temp/ &&\
+	R CMD SHLIB ../../src/*.cpp ../../src/*.c -o ../../fdaPDE_temp.so
 clean:
 	rm src/*.o

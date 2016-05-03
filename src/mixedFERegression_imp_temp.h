@@ -331,23 +331,44 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::getRightHandData(VectorXr
 
 template<typename InputHandler, typename Integrator, UInt ORDER>
 void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(UInt output_index, Real lambda)
-{	
-	std::cout << "Starting GCV computation" << std::endl;
+{
+    std::cout << "Starting GCV computation" << std::endl;
     timer clock1, clock2,clock3;
     clock3.start();
     clock1.start();
 
     UInt nnodes = mesh_.num_nodes();
     UInt nlocations = regressionData_.getNumberofObservations();
+    
+    //settaggio di psi
+    SpMat psi(nlocations,nnodes);
+    if (regressionData_.isLocationsByNodes()){
+    	std::vector<coeff> tripletAll;
+    	auto k = regressionData_.getObservationsIndices();
+    	tripletAll.reserve(k.size());
+    	for (int i = 0; i< k.size(); ++i){
+    		tripletAll.push_back(coeff(k[i],k[i],1));
+    	}
+    	psi.setFromTriplets(tripletAll.begin(),tripletAll.end());
+    }
+    else{
+    	psi=psi_;
+    }
 
+    //costruito Atilda e decomposta
     Eigen::SparseLU<SpMat> solver;
-    solver.compute(_coeffmatrix);
+    solver.compute(MMat_);
+    SpMat U = solver.solve(AMat_);
+    SpMat A = psi.transpose()*psi + lambda*AMat_.transpose()*U;
+    Eigen::SparseLU<SpMat> Adec;
+    Adec.compute(A);
     clock1.stop();
-
     clock2.start();
+
+    //genero matrice aleatoria
     std::default_random_engine generator;
     std::bernoulli_distribution distribution(0.5);
-    int nrealizations=1000;
+    int nrealizations=100;
     MatrixXr u(nlocations, nrealizations);
     for (int j=0; j<nrealizations; ++j) {
         for (int i=0; i<nlocations; ++i) {
@@ -359,54 +380,40 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(U
             }
         }
     }
-    MatrixXr v;
-    if (regressionData_.getCovariates().rows() == 0) {
-        v = u;
+    std::cout << "matrice aleatoria generata" <<std::endl;
+
+    //risolvo il sistema Atilda x1=psiT Q u
+    MatrixXr x1= Adec.solve(psi.transpose()* LeftMultiplybyQ(u));
+    std::cout << "risolvo il sistema Atilda x1=psiT Q u" <<std::endl;
+
+
+    //solo in caso di covariate
+    if (regressionData_.getCovariates().rows() != 0){
+
+	    //costruire D e decomporla
+	    MatrixXr W(this->regressionData_.getCovariates());
+	    MatrixXr psiTW=psi.transpose()*W;
+	    MatrixXr D = W.transpose() * W + psiTW.transpose() * Adec.solve(psiTW);
+	    Eigen::PartialPivLU<MatrixXr> Ddec;
+	    Ddec.compute(D);
+
+	    //risolvere sistemini lineari
+	    MatrixXr x2 = Ddec.solve(psiTW.transpose() * x1);
+	    MatrixXr x3 = Adec.solve(psiTW*x2);
+	    x1=x1-x3;
+	}
+
+	std::cout << "solo in caso di covariate" <<std::endl;
+
+	MatrixXr z = MatrixXr::Zero(nrealizations,nnodes);
+	VectorXr degree_vector(nrealizations);
+	z.topRows(nnodes) = u.transpose()*psi;
+    
+    for (int i=0; i<nrealizations; ++i) {
+        degree_vector(i) = z.col(i).dot(x1.col(i)) + regressionData_.getCovariates().cols();
     }
-    else {
-        v = Q_*u;
-    }
-    MatrixXr y = MatrixXr::Zero(2*nnodes, nrealizations);
-    if (regressionData_.isLocationsByNodes()) {
-        for (int j=0; j<nrealizations; ++j) {
-            auto index = regressionData_.getObservationsIndices();
-            for (int i=0; i<nlocations; ++i) {
-                y(index[i], j) = v(i, j);
-            }
-        }
-    }
-    else {
-        y.topRows(nnodes) = psi_.transpose()*v;
-    }
-    MatrixXr x = solver.solve(y);
-    VectorXr degree_vector(nrealizations);
-    if (regressionData_.getCovariates().rows() == 0) {
-        for (int i=0; i<nrealizations; ++i) {
-            degree_vector(i) = y.col(i).dot(x.col(i));
-        }
-    }
-    else {
-        MatrixXr z = MatrixXr::Zero(2*nnodes, nrealizations);
-        if (regressionData_.isLocationsByNodes()) {
-            for (int j=0; j<nrealizations; ++j) {
-                auto index = regressionData_.getObservationsIndices();
-                for (int i=0; i<nlocations; ++i) {
-                    z(index[i], j) = u(i, j);
-                }
-            }
-        }
-        else {
-            z.topRows(nnodes) = psi_.transpose()*u;
-        }
-        for (int i=0; i<nrealizations; ++i) {
-            degree_vector(i) = z.col(i).dot(x.col(i)) +
-                               regressionData_.getCovariates().cols();
-        }
-        
-    }
-//    std::cout << "degree_vector:" <<std::endl;
-//    std::cout << degree_vector << std::endl;
     _dof[output_index] = degree_vector.sum()/nrealizations;
+
     clock2.stop();
     std::cout << " Final clock" << std::endl;
     clock3.stop();
@@ -692,6 +699,24 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::solve(UInt output_index)
 	//std::cout<<this->_coeffmatrix;
 	this->_solution[output_index].resize(this->_coeffmatrix.rows());
 	P::solve(this->_coeffmatrix,this->_b,this->_solution[output_index]);
+}
+
+template<typename InputHandler, typename Integrator, UInt ORDER>
+MatrixXr MixedFERegression<InputHandler,Integrator,ORDER>::LeftMultiplybyQ(const MatrixXr& u)
+{	
+	if (regressionData_.getCovariates().rows() == 0){
+		return u;
+	}
+	else{
+		MatrixXr W(this->regressionData_.getCovariates());
+		if (isWTWfactorized_ == false ){
+			WTWinv_.compute(W.transpose()*W);
+			isWTWfactorized_=true;
+		}
+		MatrixXr Pu= W*WTWinv_.solve(W.transpose()*u);
+		return u-Pu;
+	}
+
 }
 
 #endif

@@ -1,0 +1,2 @@
+PKG_CPPFLAGS = -I../../Eigen -D TEMP_VERSION
+PKG_CXXFLAGS = -std=c++11
