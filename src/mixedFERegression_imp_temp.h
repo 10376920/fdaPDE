@@ -356,16 +356,18 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(U
     }
     
     VectorXr diag = VectorXr::Zero(nnodes);
-    for (int k=0; k<mat.outerSize(); ++k) {
+    for (int k=0; k<MMat_.outerSize(); ++k) {
         for (SpMat::InnerIterator it(MMat_,k); it; ++it) {
             diag(k) += it.value();
         }
+        diag(k) = 1.0/diag(k);
     }
-
+    Eigen::DiagonalMatrix<Real, Eigen::Dynamic> lumped_inv(nnodes);
+    lumped_inv.diagonal() = diag;
     //costruito Atilda e decomposta
     Eigen::SparseLU<SpMat> solver;
     //solver.compute(MMat_);
-    SpMat U = AMat_;//SpMat U = solver.solve(AMat_);
+    SpMat U = lumped_inv*AMat_;//SpMat U = solver.solve(AMat_);
     SpMat A = psi.transpose()*psi + lambda*AMat_.transpose()*U;
     Eigen::SparseLU<SpMat> Adec;
     Adec.compute(A);
