@@ -347,18 +347,25 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(U
     	auto k = regressionData_.getObservationsIndices();
     	tripletAll.reserve(k.size());
     	for (int i = 0; i< k.size(); ++i){
-    		tripletAll.push_back(coeff(k[i],k[i],1));
+    		tripletAll.push_back(coeff(i,k[i],1.0));
     	}
     	psi.setFromTriplets(tripletAll.begin(),tripletAll.end());
     }
     else{
     	psi=psi_;
     }
+    
+    VectorXr diag = VectorXr::Zero(nnodes);
+    for (int k=0; k<mat.outerSize(); ++k) {
+        for (SpMat::InnerIterator it(MMat_,k); it; ++it) {
+            diag(k) += it.value();
+        }
+    }
 
     //costruito Atilda e decomposta
     Eigen::SparseLU<SpMat> solver;
-    solver.compute(MMat_);
-    SpMat U = solver.solve(AMat_);
+    //solver.compute(MMat_);
+    SpMat U = AMat_;//SpMat U = solver.solve(AMat_);
     SpMat A = psi.transpose()*psi + lambda*AMat_.transpose()*U;
     Eigen::SparseLU<SpMat> Adec;
     Adec.compute(A);
@@ -400,14 +407,14 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(U
 	    //risolvere sistemini lineari
 	    MatrixXr x2 = Ddec.solve(psiTW.transpose() * x1);
 	    MatrixXr x3 = Adec.solve(psiTW*x2);
-	    x1=x1-x3;
+	    x1 -= x3;
 	}
 
 	std::cout << "solo in caso di covariate" <<std::endl;
 
-	MatrixXr z = MatrixXr::Zero(nrealizations,nnodes);
+	//MatrixXr z = MatrixXr::Zero(nrealizations,nnodes);
 	VectorXr degree_vector(nrealizations);
-	z.topRows(nnodes) = u.transpose()*psi;
+	MatrixXr z = psi.transpose()*u;
     
     for (int i=0; i<nrealizations; ++i) {
         degree_vector(i) = z.col(i).dot(x1.col(i)) + regressionData_.getCovariates().cols();
