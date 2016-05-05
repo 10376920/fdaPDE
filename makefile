@@ -19,5 +19,8 @@ stochastic:
 temp:
 	cd makevars/temp/ &&\
 	R CMD SHLIB ../../src/*.cpp ../../src/*.c -o ../../fdaPDE_temp.so
+woodbury_whole:
+	cd makevars/woodbury_whole/ &&\
+	R CMD SHLIB ../../src/*.cpp ../../src/*.c -o ../../fdaPDE_woodbury_whole.so
 clean:
 	rm src/*.o

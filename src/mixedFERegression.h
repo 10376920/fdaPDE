@@ -29,9 +29,10 @@ class MixedFERegression{
 		MatrixXr Q_;
 		MatrixXr H_;
 
-		SpMat _coeffmatrix;       //!A Eigen::VectorXr: Stores the system right hand side.
-		VectorXr _b;			  //!A Eigen::VectorXr : Stores the system solution
-		std::vector<VectorXr> _solution;
+		SpMat _coeffmatrix;
+		SpMat _coeffmatrix2;
+		VectorXr _b;                     //!A Eigen::VectorXr: Stores the system right hand side.
+		std::vector<VectorXr> _solution; //!A Eigen::VectorXr : Stores the system solution
 		std::vector<Real> _dof;
 
 		Eigen::PartialPivLU<MatrixXr> WTWinv_;
@@ -42,6 +43,7 @@ class MixedFERegression{
 		void setH();
 
 		void buildCoeffMatrix(const SpMat& DMat,  const SpMat& AMat,  const SpMat& MMat);
+		void buildCoeffMatrix2(const SpMat& Psi,  const SpMat& AMat,  const SpMat& MMat);
 		MatrixXr LeftMultiplybyQ(const MatrixXr& u);
 
 	public:
@@ -128,6 +130,10 @@ class MixedFERegression{
 
 #ifdef TEMP_VERSION
 #include "mixedFERegression_imp_temp.h"
+#endif
+
+#ifdef WOODBURY_WHOLE_VERSION
+#include "mixedFERegression_imp_woodbury_whole.h"
 #endif
 
 #endif
