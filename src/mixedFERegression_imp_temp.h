@@ -419,9 +419,13 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(U
 	MatrixXr z = psi.transpose()*u;
     
     for (int i=0; i<nrealizations; ++i) {
-        degree_vector(i) = z.col(i).dot(x1.col(i)) + regressionData_.getCovariates().cols();
+        degree_vector(i) = z.col(i).dot(x1.col(i));
     }
     _dof[output_index] = degree_vector.sum()/nrealizations;
+    std::cout << "regressionData_.getCovariates().cols() = " << regressionData_.getCovariates().cols() << std::endl;
+    if (regressionData_.getCovariates().rows() != 0) {
+        _dof[output_index] += regressionData_.getCovariates().cols();
+    }
 
     clock2.stop();
     std::cout << " Final clock" << std::endl;
