@@ -4,22 +4,25 @@ source("tests/mesh.R")
 
 libraries =
     c("fdaPDE_original",
-      "fdaPDE_woodbury_whole")
+      "fdaPDE_stochastic",
+      "fdaPDE_temp",
+      "fdaPDE_woodbury_whole",
+      "fdaPDE_MUMPS_whole")
 
 ################################################################################
 # Edit here
 
 # Index (according to the order of the vector libraries) of the versions to be
 # tested
-idx_libs_to_test = c(1,2)
+idx_libs_to_test = c(1,4)
 # A vector containing the Ns of the grids to be used
-N = c(30)
+N = c(40)
 # The number of observations to be generated (same length as N)
-n_observations = c(900)
+n_observations = c(40)
 # The "true" coefficients of the covariates
 beta = rbind(4.5, -2.0, 3.2, 5.9)
 # The lambda to be used
-lambda = c(1)
+lambda = c(10)
 # The order of FEM
 order = 1
 ################################################################################
@@ -35,6 +38,11 @@ covariates = vector("list", n_meshes)
 covariates_on_nodes = vector("list", n_meshes)
 observations = vector("list", n_meshes)
 observations_on_nodes = vector("list", n_meshes)
+output1 = vector("list", n_libs_to_test*n_meshes)
+output2 = vector("list", n_libs_to_test*n_meshes)
+output3 = vector("list", n_libs_to_test*n_meshes)
+output4 = vector("list", n_libs_to_test*n_meshes)
+set.seed(7)
 for (i in 1:n_meshes) {
     grid = mesh_quadratounitario(N[i])
     mesh = create.MESH.2D(nodes=grid$nodes, order = order)
@@ -57,7 +65,7 @@ for (i in 1:n_meshes) {
 }
 
 # COVARIATES, LOC NOT ON NODES
-if (0) {
+if (1) {
     cat("\nCOVARIATES, LOC NOT ON NODES\n\n")
     for (k in 1:n_libs_to_test) {
         dyn.load(paste(libraries[idx_libs_to_test[k]],
@@ -74,12 +82,13 @@ if (0) {
                              GCV = TRUE,
                              CPP_CODE = TRUE)
             cat("edf = ", output_CPP$edf, "\n")
+            output1[[(k-1)*n_meshes + i]] = output_CPP
         }
-}
+    }
 }
 
 # COVARIATES, LOC ON NODES
-if (0) {
+if (1) {
     cat("\nCOVARIATES, LOC ON NODES\n\n")
     for (k in 1:n_libs_to_test) {
         dyn.load(paste(libraries[idx_libs_to_test[k]],
@@ -95,12 +104,13 @@ if (0) {
                              GCV = TRUE,
                              CPP_CODE = TRUE)
             cat("edf = ", output_CPP$edf, "\n")
+            output2[[(k-1)*n_meshes + i]] = output_CPP
         }
     }
 }
 
 # NO COVARIATES, LOC NOT ON NODES
-if (0) {
+if (1) {
     cat("\nNO COVARIATES, LOC NOT ON NODES\n\n")
     for (k in 1:n_libs_to_test) {
         dyn.load(paste(libraries[idx_libs_to_test[k]],
@@ -116,6 +126,7 @@ if (0) {
                              GCV = TRUE,
                              CPP_CODE = TRUE)
             cat("edf = ", output_CPP$edf, "\n")
+            output3[[(k-1)*n_meshes + i]] = output_CPP
         }
     }
 }
@@ -136,6 +147,7 @@ if (1) {
                              GCV = TRUE,
                              CPP_CODE = TRUE)
             cat("edf = ", output_CPP$edf, "\n")
+            output4[[(k-1)*n_meshes + i]] = output_CPP
         }
     }
 }
