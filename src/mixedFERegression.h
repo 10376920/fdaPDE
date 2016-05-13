@@ -25,6 +25,13 @@ class MixedFERegression{
 		SpMat DMat_;
 		SpMat AMat_;
 		SpMat MMat_;
+		SpMat A_;
+		MatrixXr U_;
+		
+		
+		Eigen::SparseLU<SpMat> Adec_;
+		Eigen::PartialPivLU<MatrixXr> Gdec_;
+		
 
 		MatrixXr Q_;
 		MatrixXr H_;
@@ -43,7 +50,7 @@ class MixedFERegression{
 		void setH();
 
 		void buildCoeffMatrix(const SpMat& DMat,  const SpMat& AMat,  const SpMat& MMat);
-		void buildCoeffMatrix2(const SpMat& Psi,  const SpMat& AMat,  const SpMat& MMat);
+		void buildA(const SpMat& Psi,  const SpMat& AMat,  const SpMat& MMat);
 		MatrixXr LeftMultiplybyQ(const MatrixXr& u);
 
 	public:
@@ -82,6 +89,9 @@ class MixedFERegression{
 
 		template<typename P>
 		void solve(UInt output_index);
+		void system_factorize();
+		template<typename Derived>
+		MatrixXr system_solve(const Eigen::MatrixBase<Derived>&);
 		//! A inline member that returns a VectorXr, returns the whole _solution. 
 		inline std::vector<VectorXr> const & getSolution() const{return _solution;};
 		inline std::vector<Real> const & getDOF() const{return _dof;};
