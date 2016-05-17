@@ -146,4 +146,8 @@ class MixedFERegression{
 #include "mixedFERegression_imp_woodbury_whole.h"
 #endif
 
+#ifdef WOODBURY_DECOMPOSEQ_VERSION
+#include "mixedFERegression_imp_woodbury_decomposeQ.h"
+#endif
+
 #endif
