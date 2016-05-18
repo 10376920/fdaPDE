@@ -5,6 +5,7 @@
 #include<random>
 #include "timing.h"
 #include "woodbury.hpp"
+#include <fstream>
 
 ////build system matrix in sparse format SWest non serve??
 //void MixedFE::build(SpMat & L, SpMat& opMat, SpMat& opMat2, SpMat& mass, const VectorXr& righthand, const VectorXr& forcing_term )
@@ -343,7 +344,7 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(U
 	// genero matrice aleatoria
 	std::default_random_engine generator;
 	std::bernoulli_distribution distribution(0.5);
-	int nrealizations=100;
+	UInt nrealizations = regressionData_.getNrealizations();
 	MatrixXr u(nlocations, nrealizations);
 	for (int j=0; j<nrealizations; ++j) {
 		for (int i=0; i<nlocations; ++i) {
@@ -362,14 +363,20 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(U
 	MatrixXr x = system_solve(b);
 	MatrixXr uTpsi = u.transpose()*psi_;
 	Real edf = 0;
-	for (int i=0; i<nrealizations; ++i) {
-		edf += uTpsi.row(i).dot(x.col(i).head(nnodes));
-	}
-	edf /= nrealizations;
+	VectorXr edf_vect(nrealizations);
+	std::ofstream output_file;
+	output_file.open("output_edf.dat");
+	Real q = 0;
 	if (regressionData_.getCovariates().rows() != 0) {
-		edf += regressionData_.getCovariates().cols();
+		q = regressionData_.getCovariates().cols();
 	}
-	_dof[output_index] = edf;
+	for (int i=0; i<nrealizations; ++i) {
+		edf = uTpsi.row(i).dot(x.col(i).head(nnodes)) + q;
+		edf_vect(i) = edf;
+		output_file << edf << "\n";
+	}
+	output_file.close();
+	_dof[output_index] = edf_vect.sum()/nrealizations;
 	clock1.stop();
 }
 

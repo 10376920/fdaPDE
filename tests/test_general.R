@@ -14,7 +14,7 @@ libraries =
 
 # Index (according to the order of the vector libraries) of the versions to be
 # tested
-idx_libs_to_test = c(1,4)
+idx_libs_to_test = c(4)
 # A vector containing the Ns of the grids to be used
 N = c(40)
 # The number of observations to be generated (same length as N)
@@ -80,7 +80,8 @@ if (1) {
                              lambda = lambda,
                              covariates=covariates[[i]],
                              GCV = TRUE,
-                             CPP_CODE = TRUE)
+                             CPP_CODE = TRUE,
+                             nrealizations = 1000)
             cat("edf = ", output_CPP$edf, "\n")
             output1[[(k-1)*n_meshes + i]] = output_CPP
         }
@@ -88,7 +89,7 @@ if (1) {
 }
 
 # COVARIATES, LOC ON NODES
-if (1) {
+if (0) {
     cat("\nCOVARIATES, LOC ON NODES\n\n")
     for (k in 1:n_libs_to_test) {
         dyn.load(paste(libraries[idx_libs_to_test[k]],
@@ -110,7 +111,7 @@ if (1) {
 }
 
 # NO COVARIATES, LOC NOT ON NODES
-if (1) {
+if (0) {
     cat("\nNO COVARIATES, LOC NOT ON NODES\n\n")
     for (k in 1:n_libs_to_test) {
         dyn.load(paste(libraries[idx_libs_to_test[k]],
@@ -132,7 +133,7 @@ if (1) {
 }
 
 # NO COVARIATES, LOC ON NODES
-if (1) {
+if (0) {
     cat("\nNO COVARIATES, LOC ON NODES\n\n")
     for (k in 1:n_libs_to_test) {
         dyn.load(paste(libraries[idx_libs_to_test[k]],
