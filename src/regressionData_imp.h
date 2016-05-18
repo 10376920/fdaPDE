@@ -29,7 +29,7 @@ RegressionDataEllipticSpaceVarying::RegressionDataEllipticSpaceVarying(std::vect
 
 #ifdef R_VERSION_
 RegressionData::RegressionData(SEXP Rlocations, SEXP Robservations, SEXP Rorder, SEXP Rlambda, SEXP Rcovariates,
-			   SEXP RBCIndices, SEXP RBCValues, SEXP DOF)
+			   SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP Rnrealizations)
 {
 	setLocations(Rlocations);
 	//std::cout<< "Locations set"<<std::endl;
@@ -37,6 +37,7 @@ RegressionData::RegressionData(SEXP Rlocations, SEXP Robservations, SEXP Rorder,
 	//std::cout<< "Observations set"<<std::endl;
 	setCovariates(Rcovariates);
 	//std::cout<< "Covariates set"<<std::endl;
+	setNrealizations(Rnrealizations);
 
 	order_ =  INTEGER(Rorder)[0];
 	DOF_ = INTEGER(DOF)[0];
@@ -53,9 +54,9 @@ RegressionData::RegressionData(SEXP Rlocations, SEXP Robservations, SEXP Rorder,
 }
 
 RegressionDataElliptic::RegressionDataElliptic(SEXP Rlocations, SEXP Robservations, SEXP Rorder, SEXP Rlambda, SEXP RK, SEXP Rbeta,
-				 SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF):
+				 SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP Rnrealizations):
 	RegressionData(Rlocations, Robservations, Rorder, Rlambda, Rcovariates,
-					 			   RBCIndices, RBCValues, DOF)
+					 			   RBCIndices, RBCValues, DOF, Rnrealizations)
 {
 	K_.resize(2, 2);
 	for(auto i=0; i<2; ++i)
@@ -76,8 +77,8 @@ RegressionDataElliptic::RegressionDataElliptic(SEXP Rlocations, SEXP Robservatio
 }
 
 RegressionDataEllipticSpaceVarying::RegressionDataEllipticSpaceVarying(SEXP Rlocations, SEXP Robservations, SEXP Rorder, SEXP Rlambda, SEXP RK, SEXP Rbeta,
-				 SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF):
-					 RegressionData(Rlocations, Robservations, Rorder, Rlambda, Rcovariates, RBCIndices, RBCValues, DOF),
+				 SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP Rnrealizations):
+					 RegressionData(Rlocations, Robservations, Rorder, Rlambda, Rcovariates, RBCIndices, RBCValues, DOF, Rnrealizations),
 					 K_(RK), beta_(Rbeta), c_(Rc), u_(Ru)
 {;}
 
@@ -89,6 +90,10 @@ void RegressionDataEllipticSpaceVarying::print(std::ostream & out) const
 		out<<beta_(i);
 	for (auto i=0;i<18;i++)
 		out<<c_(i);
+}
+
+void RegressionData::setNrealizations(SEXP Rnrealizations) {
+	nrealizations_ = INTEGER(Rnrealizations)[0];
 }
 
 void RegressionData::setObservations(SEXP Robservations)
