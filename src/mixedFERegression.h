@@ -8,6 +8,13 @@
 #include "param_functors.h"
 #include "regressionData.h"
 #include "solver.h"
+#include <memory>
+#include "LinearSolvers/SpLinearSolver.h"
+#include "LinearSolvers/EigenSparseLU.h"
+//#include "LinearSolvers/MumpsSparse.h"
+#include "Proxy.hpp"
+#include "Factory.hpp"
+
 
 
 //! A LinearSystem class: A class for the linear system construction and resolution.
@@ -15,7 +22,9 @@
 template<typename InputHandler, typename Integrator, UInt ORDER>
 class MixedFERegression{
 	private:
-
+		using LSFactory=GenericFactory::Factory<LinearSolvers::SpLinearSolver,std::string>;
+		template<class C>
+		using LSProxy=GenericFactory::Proxy<LSFactory,C>;
 		const MeshHandler<ORDER> &mesh_;
 		const InputHandler& regressionData_;
 		std::vector<coeff> tripletsData_;
@@ -25,11 +34,11 @@ class MixedFERegression{
 		SpMat DMat_;
 		SpMat AMat_;
 		SpMat MMat_;
-		SpMat A_;
-		MatrixXr U_;
+		SpMat A_;		// _coeffmatrix with psi^T*psi in north-west block
+		MatrixXr U_;	// psi^T*W padded with zeros
 		
 		
-		Eigen::SparseLU<SpMat> Adec_;
+		std::unique_ptr<LinearSolvers::SpLinearSolver> Adec_;
 		Eigen::PartialPivLU<MatrixXr> Gdec_;
 		
 
@@ -55,7 +64,16 @@ class MixedFERegression{
 
 	public:
 		//!A Constructor.
-		MixedFERegression(const MeshHandler<ORDER>& mesh, const InputHandler& regressionData):mesh_(mesh), regressionData_(regressionData), isWTWfactorized_(false){};
+		MixedFERegression(const MeshHandler<ORDER>& mesh, const InputHandler& regressionData):
+			mesh_(mesh),
+			regressionData_(regressionData),
+			isWTWfactorized_(false)
+		{
+			LSProxy<LinearSolvers::EigenSparseLU> dummy1("EigenSparseLU");
+			// LSProxy<LinearSolvers::MumpsSparse> dummy2("MumpsSparse");
+			LSFactory & LSfactory=LSFactory::Instance();
+			Adec_ = LSfactory.create("EigenSparseLU"); //TODO get name from input
+		};
 		
 		//!A Destructor
 		//~Model(){};

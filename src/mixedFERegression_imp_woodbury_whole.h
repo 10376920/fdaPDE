@@ -4,8 +4,8 @@
 #include <iostream>
 #include<random>
 #include "timing.h"
-#include "woodbury.hpp"
 #include <fstream>
+
 
 ////build system matrix in sparse format SWest non serve??
 //void MixedFE::build(SpMat & L, SpMat& opMat, SpMat& opMat2, SpMat& mass, const VectorXr& righthand, const VectorXr& forcing_term )
@@ -334,6 +334,18 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::getRightHandData(VectorXr
 template<typename InputHandler, typename Integrator, UInt ORDER>
 void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(UInt output_index, Real lambda)
 {
+//	UInt nnodes = mesh_.num_nodes();
+//	UInt nlocations = regressionData_.getNumberofObservations();
+//	MatrixXr b = MatrixXr::Zero(2*nnodes,nnodes);
+//	b.topRows(nnodes) = psi_.transpose()*LeftMultiplybyQ(psi_);
+//	MatrixXr inv = system_solve(b);
+//	MatrixXr inv2 = inv.topRows(nnodes);
+//	std::ofstream output_file;
+//	output_file.open("inv_matrix.dat");
+//	output_file << inv2 << std::endl;
+//	output_file.close();
+	
+	
 	std::cout << "Starting GCV computation" << std::endl;
 	timer clock1;
 	clock1.start();
@@ -362,7 +374,6 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(U
 
 	MatrixXr x = system_solve(b);
 	MatrixXr uTpsi = u.transpose()*psi_;
-	Real edf = 0;
 	VectorXr edf_vect(nrealizations);
 	std::ofstream output_file;
 	output_file.open("output_edf.dat");
@@ -370,13 +381,21 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(U
 	if (regressionData_.getCovariates().rows() != 0) {
 		q = regressionData_.getCovariates().cols();
 	}
+	Real var = 0;
 	for (int i=0; i<nrealizations; ++i) {
-		edf = uTpsi.row(i).dot(x.col(i).head(nnodes)) + q;
-		edf_vect(i) = edf;
-		output_file << edf << "\n";
+		edf_vect(i) = uTpsi.row(i).dot(x.col(i).head(nnodes)) + q;
+		var += edf_vect(i)*edf_vect(i);
+		output_file << edf_vect(i) << "\n";
 	}
 	output_file.close();
-	_dof[output_index] = edf_vect.sum()/nrealizations;
+	Real mean = edf_vect.sum()/nrealizations;
+	_dof[output_index] = mean;
+	var /= nrealizations;
+	var -= mean*mean;
+	Real std = sqrt(var);
+	std::cout << "edf mean = " << mean << std::endl;
+	std::cout << "edf var = " << var << std::endl;
+	std::cout << "edf std = " << std << std::endl;
 	clock1.stop();
 }
 
@@ -388,7 +407,8 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::smoothLaplace()
 {
 	//std::cout<<"Laplace Penalization - Order: "<<ORDER<<std::endl;
 
-	//UInt ndata=regressionData_.getObservations().size();
+	//UInt ndata=regressionData_.getObservations().size();	
+	
 	UInt nnodes=mesh_.num_nodes();
 
 	FiniteElement<Integrator, ORDER> fe;
@@ -714,7 +734,7 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::system_factorize() {
 	timer clock1, clock2;
 	std::cout << "Decomposing A" << std::endl;
 	clock1.start();
-	Adec_.compute(A_);
+	Adec_->factorize(A_);
 	clock1.stop();
 	std::cout << "Decomposing D" << std::endl;
 	clock2.start();
@@ -723,7 +743,8 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::system_factorize() {
 		MatrixXr W(this->regressionData_.getCovariates());
 		U_ = MatrixXr::Zero(2*nnodes, W.cols());
 		U_.topRows(nnodes) = psi_.transpose()*W;
-		MatrixXr G = -W.transpose()*W + U_.transpose()*Adec_.solve(U_);
+		Adec_->solve(U_);
+		MatrixXr G = -W.transpose()*W + U_.transpose()*Adec_->getSolution();
 		Gdec_.compute(G);
 	}
 	clock2.stop();
@@ -735,14 +756,16 @@ MatrixXr MixedFERegression<InputHandler,Integrator,ORDER>::system_solve(const Ei
 	timer clock1, clock2;
 	std::cout << "Solving FEM: 1" << std::endl;
 	clock1.start();
-	MatrixXr x1 = Adec_.solve(b);
+	Adec_->solve(b);
+	MatrixXr x1 = Adec_->getSolution();
 	clock1.stop();
 	clock2.start();
 	if (regressionData_.getCovariates().rows() != 0) {
 		std::cout << "Solving FEM: 2" << std::endl;
 		clock2.start();
 		MatrixXr x2 = Gdec_.solve(U_.transpose()*x1);
-		x1 -= Adec_.solve(U_*x2);
+		Adec_->solve(U_*x2);
+		x1 -= Adec_->getSolution();
 		clock2.stop();
 	}
 	return x1;

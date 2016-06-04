@@ -21,9 +21,9 @@ temp:
 	R CMD SHLIB ../../src/*.cpp ../../src/*.c -o ../../fdaPDE_temp.so
 woodbury_whole:
 	cd makevars/woodbury_whole/ &&\
-	R CMD SHLIB ../../src/*.cpp ../../src/*.c -o ../../fdaPDE_woodbury_whole.so
+	R CMD SHLIB ../../src/*.cpp ../../src/*.c ../../src/LinearSolvers/*.cpp -o ../../fdaPDE_woodbury_whole.so
 woodbury_decomposeQ:
 	cd makevars/woodbury_decomposeQ/ &&\
 	R CMD SHLIB ../../src/*.cpp ../../src/*.c -o ../../fdaPDE_woodbury_decomposeQ.so
 clean:
-	rm src/*.o
+	rm src/*.o src/LinearSolvers/*.o 
