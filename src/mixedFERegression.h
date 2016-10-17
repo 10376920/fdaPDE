@@ -9,11 +9,12 @@
 #include "regressionData.h"
 #include "solver.h"
 #include <memory>
-#include "LinearSolvers/SpLinearSolver.h"
+//#include "LinearSolvers/SpLinearSolver.h"
 #include "LinearSolvers/EigenSparseLU.h"
-//#include "LinearSolvers/MumpsSparse.h"
+#include "LinearSolvers/MumpsSparse.h"
 #include "Proxy.hpp"
 #include "Factory.hpp"
+
 
 
 
@@ -70,9 +71,9 @@ class MixedFERegression{
 			isWTWfactorized_(false)
 		{
 			LSProxy<LinearSolvers::EigenSparseLU> dummy1("EigenSparseLU");
-			// LSProxy<LinearSolvers::MumpsSparse> dummy2("MumpsSparse");
+			LSProxy<LinearSolvers::MumpsSparse> dummy2("MumpsSparse");
 			LSFactory & LSfactory=LSFactory::Instance();
-			Adec_ = LSfactory.create("EigenSparseLU"); //TODO get name from input
+			Adec_ = LSfactory.create("MumpsSparse"); //TODO get name from input
 		};
 		
 		//!A Destructor
@@ -144,9 +145,9 @@ class MixedFERegression{
 #include "mixedFERegression_imp_SCHUR.h"
 #endif
 
-#ifdef MUMPS_VERSION
-#include "mixedFERegression_imp_MUMPS.h"
-#endif
+//#ifdef MUMPS_VERSION
+//#include "mixedFERegression_imp_MUMPS.h"
+//#endif
 
 #ifdef MUMPS_WHOLE_VERSION
 #include "mixedFERegression_imp_mumps_whole.h"

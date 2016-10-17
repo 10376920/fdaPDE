@@ -57,5 +57,33 @@ namespace LinearSolvers {
 		delete[] rhs;
 	}
 
+	void MumpsSparse::setParameters(const ParameterList &list) {
+		std::string name;
+		for (ParameterList::iterator it = list.begin(); it != list.end(); ++it) {
+			name = list.getName(it);
+			if(name == "sym") {
+				_id.sym = list.getValue<int>(it);
+			}
+			else if(name == "comm") {
+				_id.comm_fortran = list.getValue<int>(it);
+			}
+			else if(name == "par") {
+				_id.par = list.getValue<int>(it);
+			}
+			else if(name == "icntl[0]") {
+				_id.icntl[0] = list.getValue<int>(it);
+			}
+			else if(name == "icntl[1]") {
+				_id.icntl[1] = list.getValue<int>(it);
+			}
+			else if(name == "icntl[2]") {
+				_id.icntl[2] = list.getValue<int>(it);
+			}
+			else if(name == "icntl[3]") {
+				_id.icntl[3] = list.getValue<int>(it);
+			}
+		}
+	}
+
 }
 

@@ -20,6 +20,7 @@ temp:
 	cd makevars/temp/ &&\
 	R CMD SHLIB ../../src/*.cpp ../../src/*.c -o ../../fdaPDE_temp.so
 woodbury_whole:
+	MAKEFLAGS="CXX=mpic++  SHLIB_CXXLD=mpic++" &&\
 	cd makevars/woodbury_whole/ &&\
 	R CMD SHLIB ../../src/*.cpp ../../src/*.c ../../src/LinearSolvers/*.cpp -o ../../fdaPDE_woodbury_whole.so
 woodbury_decomposeQ:

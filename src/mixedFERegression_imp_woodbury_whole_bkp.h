@@ -200,19 +200,29 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::getDataMatrixByIndices(Sp
 template<typename InputHandler, typename Integrator, UInt ORDER>
 void MixedFERegression<InputHandler,Integrator,ORDER>::setPsi(){
 
-		//std::cout<<"Data Matrix Computation by Basis Evaluation.."<<std::endl;
-		UInt nnodes = mesh_.num_nodes();
-		UInt nlocations = regressionData_.getNumberofObservations();
+	//std::cout<<"Data Matrix Computation by Basis Evaluation.."<<std::endl;
+	UInt nnodes = mesh_.num_nodes();
+	UInt nlocations = regressionData_.getNumberofObservations();
 
-		//cout<<"Nodes number "<<nnodes<<"Locations number "<<nlocations<<endl;
+	//cout<<"Nodes number "<<nnodes<<"Locations number "<<nlocations<<endl;
 
-		//std::vector<coeff> entries;
-		//entries.resize((ORDER * 3)*nlocations);
+	//std::vector<coeff> entries;
+	//entries.resize((ORDER * 3)*nlocations);
 
 
-		psi_.resize(nlocations, nnodes);
-		//psi_.reserve(Eigen::VectorXi::Constant(nlocations,ORDER*3));
-
+	psi_.resize(nlocations, nnodes);
+	//psi_.reserve(Eigen::VectorXi::Constant(nlocations,ORDER*3));
+	if (regressionData_.isLocationsByNodes()){
+		std::vector<coeff> tripletAll;
+		auto k = regressionData_.getObservationsIndices();
+		tripletAll.reserve(k.size());
+		for (int i = 0; i< k.size(); ++i){
+			tripletAll.push_back(coeff(i,k[i],1.0));
+		}
+    	psi_.setFromTriplets(tripletAll.begin(),tripletAll.end());
+    	psi_.makeCompressed();
+    }
+    else {
 		Triangle<ORDER*3> tri_activated;
 		Eigen::Matrix<Real,ORDER * 3,1> coefficients;
 
@@ -241,6 +251,7 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::setPsi(){
 		}
 
 		psi_.makeCompressed();
+	}
 }
 
 template<typename InputHandler, typename Integrator, UInt ORDER>
@@ -331,88 +342,87 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::getRightHandData(VectorXr
 
 template<typename InputHandler, typename Integrator, UInt ORDER>
 void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(UInt output_index, Real lambda)
-{	
+{
 	std::cout << "Starting GCV computation" << std::endl;
-    timer clock1, clock2,clock3;
-    clock3.start();
-    clock1.start();
+	timer clock1, clock2,clock3;
+	clock3.start();
 
-    UInt nnodes = mesh_.num_nodes();
-    UInt nlocations = regressionData_.getNumberofObservations();
+	UInt nnodes = mesh_.num_nodes();
+	UInt nlocations = regressionData_.getNumberofObservations();
 
-    Eigen::SparseLU<SpMat> solver;
-    solver.compute(_coeffmatrix);
-    clock1.stop();
+	clock1.start();
+	std::cout << "Factorizing A" << std::endl;
+	Eigen::SparseLU<SpMat> Adec;
+	Adec.compute(_coeffmatrix2);
+	clock1.stop();
 
-    clock2.start();
-    int nrealizations=nlocations;
-    MatrixXr u = MatrixXr::Identity(nlocations, nlocations);
-//    std::default_random_engine generator;
-//    std::bernoulli_distribution distribution(0.5);
-//    int nrealizations=1000;
-//    MatrixXr u(nlocations, nrealizations);
-//    for (int j=0; j<nrealizations; ++j) {
-//        for (int i=0; i<nlocations; ++i) {
-//            if (distribution(generator)) {
-//                u(i,j) = 1.0;
-//            }
-//            else {
-//                u(i,j) = -1.0;
-//            }
-//        }
-//    }
-    MatrixXr v;
-    if (regressionData_.getCovariates().rows() == 0) {
-        v = u;
-    }
-    else {
-        v = Q_*u;
-    }
-    MatrixXr y = MatrixXr::Zero(2*nnodes, nrealizations);
-    if (regressionData_.isLocationsByNodes()) {
-        for (int j=0; j<nrealizations; ++j) {
-            auto index = regressionData_.getObservationsIndices();
-            for (int i=0; i<nlocations; ++i) {
-                y(index[i], j) = v(i, j);
-            }
-        }
-    }
-    else {
-        y.topRows(nnodes) = psi_.transpose()*v;
-    }
-    MatrixXr x = solver.solve(y);
-    VectorXr degree_vector(nrealizations);
-    if (regressionData_.getCovariates().rows() == 0) {
-        for (int i=0; i<nrealizations; ++i) {
-            degree_vector(i) = y.col(i).dot(x.col(i));
-        }
-    }
-    else {
-        MatrixXr z = MatrixXr::Zero(2*nnodes, nrealizations);
-        if (regressionData_.isLocationsByNodes()) {
-            for (int j=0; j<nrealizations; ++j) {
-                auto index = regressionData_.getObservationsIndices();
-                for (int i=0; i<nlocations; ++i) {
-                    z(index[i], j) = u(i, j);
-                }
-            }
-        }
-        else {
-            z.topRows(nnodes) = psi_.transpose()*u;
-        }
-        for (int i=0; i<nrealizations; ++i) {
-            degree_vector(i) = z.col(i).dot(x.col(i));// +
-                               //regressionData_.getCovariates().cols();
-        }
-        
-    }
-//    std::cout << "degree_vector:" <<std::endl;
-//    std::cout << degree_vector << std::endl;
-    _dof[output_index] = degree_vector.sum();
-//    _dof[output_index] = degree_vector.sum()/nrealizations;
-    clock2.stop();
-    std::cout << " Final clock" << std::endl;
-    clock3.stop();
+
+	int nrealizations = nlocations;
+	MatrixXr u = MatrixXr::Identity(nlocations, nrealizations);
+	//genero matrice aleatoria
+//	std::default_random_engine generator;
+//	std::bernoulli_distribution distribution(0.5);
+//	int nrealizations=16384;
+//	MatrixXr u(nlocations, nrealizations);
+//	for (int j=0; j<nrealizations; ++j) {
+//		for (int i=0; i<nlocations; ++i) {
+//			if (distribution(generator)) {
+//				u(i,j) = 1.0;
+//			}
+//			else {
+//				u(i,j) = -1.0;
+//			}
+//		}
+//	}
+
+	clock2.start();
+	std::cout << "Solving the linear systems" << std::endl;
+	//risolvo il sistema Atilda x1=psiT Q u
+	MatrixXr psiTQu_padded = MatrixXr::Zero(2*nnodes,u.cols());
+	psiTQu_padded.topRows(nnodes) = psi_.transpose()* LeftMultiplybyQ(u);
+	MatrixXr x1= Adec.solve(psiTQu_padded);
+
+	//solo in caso di covariate
+	if (regressionData_.getCovariates().rows() != 0){
+		//costruire D e decomporla
+		MatrixXr W(this->regressionData_.getCovariates());
+		MatrixXr psiTW=psi_.transpose()*W;
+		MatrixXr psiTW_padded = MatrixXr::Zero(2*nnodes, W.cols());
+		psiTW_padded.topRows(nnodes) = psiTW;
+		MatrixXr D = -W.transpose() * W + psiTW_padded.transpose() * Adec.solve(psiTW_padded);
+		Eigen::PartialPivLU<MatrixXr> Ddec;
+		Ddec.compute(D);
+
+		//risolvere sistemini lineari
+		MatrixXr x2 = Ddec.solve(psiTW_padded.transpose() * x1);
+		MatrixXr x3 = Adec.solve(psiTW_padded*x2);
+		x1 -= x3;
+	}
+	std::cout << "x1:\n" << x1 << std::endl;
+
+	VectorXr degree_vector(nrealizations);
+	MatrixXr z = psi_.transpose()*u;
+	
+	std::cout << "z:\n" << z << std::endl;
+
+	for (int i=0; i<nrealizations; ++i) {
+		degree_vector(i) = z.col(i).dot(x1.col(i).head(nnodes));
+	}
+	std::cout << "degree_vector:" << degree_vector << std::endl;
+	_dof[output_index] = degree_vector.sum();
+//	_dof[output_index] = degree_vector.sum()/nrealizations;
+	if (regressionData_.getCovariates().rows() != 0) {
+		_dof[output_index] += regressionData_.getCovariates().cols();
+	}
+	clock2.stop();
+//	int n = 1;
+//	for (int i=0; i<14; ++i) {
+//		n *=2;
+//		std::cout << i+1 << ": " << degree_vector.head(n).sum()/n +
+//		(regressionData_.getCovariates().rows() != 0 ? regressionData_.getCovariates().cols() : 0) << std::endl;
+//	}
+	std::cout << " Final clock" << std::endl;
+	clock3.stop();
 }
 
 
@@ -437,11 +447,8 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::smoothLaplace()
 	ETMass mass(EMass);
 	ETStiff stiff(EStiff);
 
-	if(!regressionData_.isLocationsByNodes())
-	{
-		//std::cout<<"HERE";
-		setPsi();
-	}
+	setPsi();
+
 
 	if(!regressionData_.getCovariates().rows() == 0)
 	{
@@ -480,6 +487,7 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::smoothLaplace()
     	SpMat AMat_lambda = (-lambda)*AMat_;
     	SpMat MMat_lambda = (-lambda)*MMat_;
     	this->buildCoeffMatrix(DMat_, AMat_lambda, MMat_lambda);
+    	this->buildCoeffMatrix2(psi_, AMat_lambda, MMat_lambda);
 
     	//std::cout<<"AMat"<<std::endl<<_coeffmatrix;
 
@@ -522,11 +530,7 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::smoothEllipticPDE()
 	ETStiff stiff(EStiff);
 	ETGrad grad(EGrad);
 
-	if(!regressionData_.isLocationsByNodes())
-	{
-		//std::cout<<"HERE";
-		setPsi();
-	}
+	setPsi();
 
 	if(!regressionData_.getCovariates().rows() == 0)
 	{
@@ -569,6 +573,7 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::smoothEllipticPDE()
     	SpMat AMat_lambda = (-lambda)*AMat_;
     	SpMat MMat_lambda = (-lambda)*MMat_;
     	this->buildCoeffMatrix(DMat_, AMat_lambda, MMat_lambda);
+    	this->buildCoeffMatrix2(psi_, AMat_lambda, MMat_lambda);
 
     	//std::cout<<"AMat"<<std::endl<<_coeffmatrix;
 
@@ -611,11 +616,7 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::smoothEllipticPDESpaceVar
 		ETStiff stiff(EStiff);
 		ETGrad grad(EGrad);
 
-	if(!regressionData_.isLocationsByNodes())
-	{
-		//std::cout<<"HERE";
-		setPsi();
-	}
+	setPsi();
 
 	if(!regressionData_.getCovariates().rows() == 0)
 	{
@@ -623,63 +624,64 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::smoothEllipticPDESpaceVar
 		setQ();
 	}
 
-    if(!regressionData_.isLocationsByNodes())
-    {
-    	getDataMatrix(DMat_);
-    }
-    else
-    {
-    	getDataMatrixByIndices(DMat_);
-    }
-    //std::cout<<"Block Data"<<DMat_<<std::endl;
-
-    const Reaction& c = regressionData_.getC();
-    const Diffusivity& K = regressionData_.getK();
-    const Advection& beta = regressionData_.getBeta();
-    Assembler::operKernel(c*mass+stiff[K]+dot(beta,grad), mesh_, fe, AMat_);
-    Assembler::operKernel(mass, mesh_, fe, MMat_);
-
-    const ForcingTerm& u = regressionData_.getU();
-    //for(auto i=0;i<18;i++) std::cout<<u(i)<<std::endl;
-    VectorXr forcingTerm;
-    Assembler::forcingTerm(mesh_,fe, u, forcingTerm);
-
-    VectorXr rightHandData;
-    getRightHandData(rightHandData);
-    //_b.resize(2*nnodes);
-    _b = VectorXr::Zero(2*nnodes);
-    _b.topRows(nnodes)=rightHandData;
-    //std::cout<<"Forcing Term "<<std::cout<<forcingTerm<<"END";
-    _b.bottomRows(nnodes)=forcingTerm;
-    //std::cout<<"b vector"<<_b;
-
-    _solution.resize(regressionData_.getLambda().size());
-    _dof.resize(regressionData_.getLambda().size());
-
-    for(UInt i = 0; i<regressionData_.getLambda().size(); ++i)
+	if(!regressionData_.isLocationsByNodes())
 	{
-    	//build(tripletsData_,(-regressionData_.getLambda())*stiff, (-regressionData_.getLambda())*mass, righthand, forcing);
+		getDataMatrix(DMat_);
+	}
+	else
+	{
+		getDataMatrixByIndices(DMat_);
+	}
+	//std::cout<<"Block Data"<<DMat_<<std::endl;
 
-    	Real lambda = regressionData_.getLambda()[i];
-    	SpMat AMat_lambda = (-lambda)*AMat_;
-    	SpMat MMat_lambda = (-lambda)*MMat_;
-    	this->buildCoeffMatrix(DMat_, AMat_lambda, MMat_lambda);
+	const Reaction& c = regressionData_.getC();
+	const Diffusivity& K = regressionData_.getK();
+	const Advection& beta = regressionData_.getBeta();
+	Assembler::operKernel(c*mass+stiff[K]+dot(beta,grad), mesh_, fe, AMat_);
+	Assembler::operKernel(mass, mesh_, fe, MMat_);
 
-    	//std::cout<<"AMat"<<std::endl<<_coeffmatrix;
+	const ForcingTerm& u = regressionData_.getU();
+	//for(auto i=0;i<18;i++) std::cout<<u(i)<<std::endl;
+	VectorXr forcingTerm;
+	Assembler::forcingTerm(mesh_,fe, u, forcingTerm);
+
+	VectorXr rightHandData;
+	getRightHandData(rightHandData);
+	//_b.resize(2*nnodes);
+	_b = VectorXr::Zero(2*nnodes);
+	_b.topRows(nnodes)=rightHandData;
+	//std::cout<<"Forcing Term "<<std::cout<<forcingTerm<<"END";
+	_b.bottomRows(nnodes)=forcingTerm;
+	//std::cout<<"b vector"<<_b;
+
+	_solution.resize(regressionData_.getLambda().size());
+	_dof.resize(regressionData_.getLambda().size());
+
+	for(UInt i = 0; i<regressionData_.getLambda().size(); ++i)
+	{
+		//build(tripletsData_,(-regressionData_.getLambda())*stiff, (-regressionData_.getLambda())*mass, righthand, forcing);
+
+		Real lambda = regressionData_.getLambda()[i];
+		SpMat AMat_lambda = (-lambda)*AMat_;
+		SpMat MMat_lambda = (-lambda)*MMat_;
+		this->buildCoeffMatrix(DMat_, AMat_lambda, MMat_lambda);
+		this->buildCoeffMatrix2(psi_, AMat_lambda, MMat_lambda);
+
+		//std::cout<<"AMat"<<std::endl<<_coeffmatrix;
 
 
-    	//Appling border conditions if necessary
-    	if(regressionData_.getDirichletIndices().size() != 0)
-    		addDirichletBC(regressionData_.getDirichletIndices(), regressionData_.getDirichletValues());
+		//Appling border conditions if necessary
+		if(regressionData_.getDirichletIndices().size() != 0)
+			addDirichletBC(regressionData_.getDirichletIndices(), regressionData_.getDirichletValues());
 
-    	//prova.solveSystem<SpConjGrad>();
+		//prova.solveSystem<SpConjGrad>();
 
-    	//std::cout<< _coeffmatrix;
-    	this-> template solve<SpLU>(i);
-    	if(regressionData_.computeDOF())
-    		computeDegreesOfFreedom(i, lambda);
-    	else
-    		_dof[i] = -1;
+		//std::cout<< _coeffmatrix;
+		this-> template solve<SpLU>(i);
+		if(regressionData_.computeDOF())
+			computeDegreesOfFreedom(i, lambda);
+		else
+			_dof[i] = -1;
 
 	}
 
@@ -695,6 +697,64 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::solve(UInt output_index)
 	//std::cout<<this->_coeffmatrix;
 	this->_solution[output_index].resize(this->_coeffmatrix.rows());
 	P::solve(this->_coeffmatrix,this->_b,this->_solution[output_index]);
+}
+
+template<typename InputHandler, typename Integrator, UInt ORDER>
+MatrixXr MixedFERegression<InputHandler,Integrator,ORDER>::LeftMultiplybyQ(const MatrixXr& u)
+{	
+	if (regressionData_.getCovariates().rows() == 0){
+		return u;
+	}
+	else{
+		MatrixXr W(this->regressionData_.getCovariates());
+		if (isWTWfactorized_ == false ){
+			WTWinv_.compute(W.transpose()*W);
+			isWTWfactorized_=true;
+		}
+		MatrixXr Pu= W*WTWinv_.solve(W.transpose()*u);
+		return u-Pu;
+	}
+
+}
+
+template<typename InputHandler, typename Integrator, UInt ORDER>
+void MixedFERegression<InputHandler,Integrator,ORDER>::buildCoeffMatrix2(const SpMat& Psi,  const SpMat& AMat,  const SpMat& MMat) {
+		//I reserve the exact memory for the nonzero entries of each row of the coeffmatrix for boosting performance
+	//_coeffmatrix.setFromTriplets(tripletA.begin(),tripletA.end());
+
+	UInt nnodes = mesh_.num_nodes();
+	
+	SpMat DMat = Psi.transpose()*Psi;
+
+	std::vector<coeff> tripletAll;
+	tripletAll.reserve(DMat.nonZeros() + 2*AMat.nonZeros() + MMat.nonZeros());
+
+	for (int k=0; k<DMat.outerSize(); ++k)
+	  for (SpMat::InnerIterator it(DMat,k); it; ++it)
+	  {
+		  tripletAll.push_back(coeff(it.row(), it.col(),it.value()));
+	  }
+	for (int k=0; k<MMat.outerSize(); ++k)
+	  for (SpMat::InnerIterator it(MMat,k); it; ++it)
+	  {
+		  tripletAll.push_back(coeff(it.row()+nnodes, it.col()+nnodes,it.value()));
+	  }
+	for (int k=0; k<AMat.outerSize(); ++k)
+	  for (SpMat::InnerIterator it(AMat,k); it; ++it)
+	  {
+		  tripletAll.push_back(coeff(it.col(), it.row()+nnodes,it.value()));
+	  }
+	for (int k=0; k<AMat.outerSize(); ++k)
+	  for (SpMat::InnerIterator it(AMat,k); it; ++it)
+	  {
+		  tripletAll.push_back(coeff(it.row()+nnodes, it.col(), it.value()));
+	  }
+
+	_coeffmatrix2.setZero();
+	_coeffmatrix2.resize(2*nnodes,2*nnodes);
+	_coeffmatrix2.setFromTriplets(tripletAll.begin(),tripletAll.end());
+	_coeffmatrix2.makeCompressed();
+	//std::cout<<"Coefficients' Matrix Set Correctly"<<std::endl;
 }
 
 #endif

@@ -1,3 +1,5 @@
+library(Rmpi)
+
 pathnames = list.files(pattern="[.]R$", path="./R/", full.names=TRUE);
 sapply(pathnames, FUN=source);
 source("tests/mesh.R")
@@ -34,7 +36,7 @@ f[[1]] <- function (x,y){sin(2*pi*x*y)}
 f[[2]] <- function (x,y){sin(2*pi*x)*sin(2*pi*y)}
 f[[3]] <- function (x,y){sin(3*pi*x)*cos(4*pi*y)}
 # The lambda to be used
-lambda = c(1,2,3) #seq(1,20,1)
+lambda = c(1) #seq(1,20,1)
 # The order of FEM
 order = 1
 ################################################################################
@@ -43,7 +45,7 @@ n_meshes = length(N)
 n_covariates = length(beta)
 n_libs_to_test = length(idx_libs_to_test)
 
-dyn.load(paste("fdaPDE_original", .Platform$dynlib.ext, sep = ""))
+dyn.load(paste("fdaPDE_woodbury_whole", .Platform$dynlib.ext, sep = ""))
 FEMbasis = vector("list", n_meshes)
 locations = vector("list", n_meshes)
 covariates = vector("list", n_meshes)
@@ -210,29 +212,31 @@ if (0) {
         }
     }
 }
-################################################################################################
-                            ###PLOT###
-#TEST1
-# to save
-#jpeg('test1_edf')
-plot(lambda, edf_Eardi1,ylim=c(4.5,5.5),type="s",col="black")
-points(lambda, edf_Woodbury1,type="s",col="red")
-#dev.off()
 
-#TEST2
-plot(lambda, edf_Eardi2,type="s",col="black")
-points(lambda, edf_Woodbury2,type="s",col="red")
+mpi.quit()
+#################################################################################################
+#                            ###PLOT###
+##TEST1
+## to save
+##jpeg('test1_edf')
+#plot(lambda, edf_Eardi1,ylim=c(4.5,5.5),type="s",col="black")
+#points(lambda, edf_Woodbury1,type="s",col="red")
+##dev.off()
 
-#TEST3
-plot(lambda, edf_Eardi3,ylim=c(0.7,1.6),type="s",col="black")
-points(lambda, edf_Woodbury3,type="s",col="red")
+##TEST2
+#plot(lambda, edf_Eardi2,type="s",col="black")
+#points(lambda, edf_Woodbury2,type="s",col="red")
 
-plot(lambda, gcv_Eardi3,type="s",col="black")
-points(lambda, gcv_Woodbury3,type="s",col="red")
+##TEST3
+#plot(lambda, edf_Eardi3,ylim=c(0.7,1.6),type="s",col="black")
+#points(lambda, edf_Woodbury3,type="s",col="red")
 
-#TEST4
-plot(lambda, edf_Eardi4,ylim= c(0.7,1.5),type="s",col="black")
-points(lambda, edf_Woodbury4,type="s",col="red")
+#plot(lambda, gcv_Eardi3,type="s",col="black")
+#points(lambda, gcv_Woodbury3,type="s",col="red")
 
-plot(lambda, gcv_Eardi4,ylim=c(0.37,0.385),type="s",col="black")
-points(lambda, gcv_Woodbury4,type="s",col="red")
+##TEST4
+#plot(lambda, edf_Eardi4,ylim= c(0.7,1.5),type="s",col="black")
+#points(lambda, edf_Woodbury4,type="s",col="red")
+
+#plot(lambda, gcv_Eardi4,ylim=c(0.37,0.385),type="s",col="black")
+#points(lambda, gcv_Woodbury4,type="s",col="red")

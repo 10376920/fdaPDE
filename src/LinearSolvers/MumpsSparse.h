@@ -3,7 +3,7 @@
 
 #include "SpLinearSolver.h"
 #include <mpi.h>
-#include <dmumps_c.h>
+#include "dmumps_c.h"
 
 namespace LinearSolvers {
 
@@ -24,6 +24,7 @@ namespace LinearSolvers {
 		MumpsSparse();
 		virtual void factorize(const Eigen::SparseMatrix<double> &);
 		virtual void solve(const Eigen::MatrixXd &);
+		virtual void setParameters(const ParameterList &list);
 	};
 
 }

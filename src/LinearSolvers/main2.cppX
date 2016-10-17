@@ -4,6 +4,7 @@
 #include "EigenSparseLU.h"
 #include "MumpsSparse.h"
 
+
 typedef Eigen::Triplet<double> coeff;
 int main(int argc, char **argv) {
 	MPI_Init(&argc,&argv);
@@ -36,6 +37,10 @@ int main(int argc, char **argv) {
 	}
 	
 	MumpsSparse solver2;
+	ParameterList list;
+	list.push_back("sym", 1);
+	solver2.setParameters(list);
+
 	solver2.factorize(A);
 	solver2.solve(b);
 	if (me == 0) {
@@ -44,6 +49,6 @@ int main(int argc, char **argv) {
 	}
 	
 	MPI_Finalize();
-	
+
 	return 0;
 }

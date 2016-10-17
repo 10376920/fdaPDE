@@ -3,6 +3,8 @@
 
 #include <iostream>
 #include<random>
+#include<cmath>
+#include <fstream>
 #include "timing.h"
 
 ////build system matrix in sparse format SWest non serve??
@@ -342,7 +344,7 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(U
 	// genero matrice aleatoria
 	std::default_random_engine generator;
 	std::bernoulli_distribution distribution(0.5);
-	int nrealizations=100;
+	UInt nrealizations = regressionData_.getNrealizations();
 	MatrixXr u(nlocations, nrealizations);
 	for (int j=0; j<nrealizations; ++j) {
 		for (int i=0; i<nlocations; ++i) {
@@ -360,32 +362,39 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(U
 
 	MatrixXr x = system_solve(b);
 	MatrixXr uTpsi = u.transpose()*psi_;
-	Real edf = 0;
-	for (int i=0; i<nrealizations; ++i) {
-		edf += uTpsi.row(i).dot(x.col(i).head(nnodes));
-	}
-	edf /= nrealizations;
+	std::ofstream output_file;
+	output_file.open("output_edf_decomposeQ.dat");
+	Real q = 0;
+	Real trace=0;
 	if (regressionData_.getCovariates().rows() != 0) {
-		edf += regressionData_.getCovariates().cols();
-	}
-
-	//alla traccia stimata stocasticamente va sottratto il pezzo colpa di P
-	if (regressionData_.getCovariates().rows() != 0) {
-		Real trace=0;
+		q = regressionData_.getCovariates().cols();
 		MatrixXr W(this->regressionData_.getCovariates());
 		MatrixXr psiTW = MatrixXr::Zero(2*nnodes,W.cols());
 		psiTW.topRows(nnodes) = psi_.transpose()* W;
-		MatrixXr x1 = Adec_.solve(psiTW);
+		MatrixXr x1 = system_solve(psiTW);
 		Eigen::PartialPivLU<MatrixXr> solver;
 		solver.compute(W.transpose()*W);
 		MatrixXr x2 = solver.solve(psiTW.transpose()*x1);
-		for(int i=0; i<x2.rows(); ++i)
+		for(int i=0; i<x2.rows(); ++i) {
 			trace += x2(i,i);
-		edf-=trace;
+		}
 	}
-
-
-	_dof[output_index] = edf;
+	Real var = 0;
+	VectorXr edf_vect(nrealizations);
+	for (int i=0; i<nrealizations; ++i) {
+		edf_vect(i) = uTpsi.row(i).dot(x.col(i).head(nnodes)) + q - trace;
+		var += edf_vect(i)*edf_vect(i);
+		output_file << edf_vect(i) << "\n";
+	}
+	output_file.close();
+	Real mean = edf_vect.sum()/nrealizations;
+	_dof[output_index] = mean;
+	var /= nrealizations;
+	var -= mean*mean;
+	Real std = sqrt(var);
+	std::cout << "edf mean = " << mean << std::endl;
+	std::cout << "edf var = " << var << std::endl;
+	std::cout << "edf std = " << std << std::endl;
 	clock1.stop();
 }
 

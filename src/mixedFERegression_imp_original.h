@@ -332,19 +332,14 @@ template<typename InputHandler, typename Integrator, UInt ORDER>
 void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(UInt output_index)
 {
     timer clock1, clock2;
-	clock1.start();
-
 	UInt nnodes = mesh_.num_nodes();
 	UInt nlocations = regressionData_.getNumberofObservations();
 
 	Eigen::SparseLU<SpMat> solver;
 	solver.compute(_coeffmatrix);
-    clock1.stop();
-    clock2.start();
 	SpMat I(_coeffmatrix.rows(),_coeffmatrix.cols());
 	I.setIdentity();
 	SpMat coeff_inv = solver.solve(I);
-
 
 	Real degrees=0;
 
@@ -405,7 +400,6 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(U
 	//std::cout<<"TRACE "<<degrees<<std::endl;
 
 	_dof[output_index] = degrees;
-	clock2.stop();
 }
 
 
@@ -482,7 +476,11 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::smoothLaplace()
     		addDirichletBC(regressionData_.getDirichletIndices(), regressionData_.getDirichletValues());
 
     	//prova.solveSystem<SpConjGrad>();
+    	timer clock1;
+    	std::cout << "Solving FEM" << std::endl;
+    	clock1.start();
     	this-> template solve<SpLU>(i);
+    	clock1.stop();
     	if(regressionData_.computeDOF())
     		computeDegreesOfFreedom(i);
     	else

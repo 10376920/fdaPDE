@@ -374,21 +374,23 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(U
     clock1.stop();
     clock2.start();
 
+    int nrealizations = nlocations;
+    MatrixXr u = MatrixXr::Identity(nlocations, nrealizations);
     //genero matrice aleatoria
-    std::default_random_engine generator;
-    std::bernoulli_distribution distribution(0.5);
-    int nrealizations=100;
-    MatrixXr u(nlocations, nrealizations);
-    for (int j=0; j<nrealizations; ++j) {
-        for (int i=0; i<nlocations; ++i) {
-            if (distribution(generator)) {
-                u(i,j) = 1.0;
-            }
-            else {
-                u(i,j) = -1.0;
-            }
-        }
-    }
+//    std::default_random_engine generator;
+//    std::bernoulli_distribution distribution(0.5);
+//    int nrealizations=100;
+//    MatrixXr u(nlocations, nrealizations);
+//    for (int j=0; j<nrealizations; ++j) {
+//        for (int i=0; i<nlocations; ++i) {
+//            if (distribution(generator)) {
+//                u(i,j) = 1.0;
+//            }
+//            else {
+//                u(i,j) = -1.0;
+//            }
+//        }
+//    }
     std::cout << "matrice aleatoria generata" <<std::endl;
 
     //risolvo il sistema Atilda x1=psiT Q u
@@ -421,7 +423,8 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(U
     for (int i=0; i<nrealizations; ++i) {
         degree_vector(i) = z.col(i).dot(x1.col(i));
     }
-    _dof[output_index] = degree_vector.sum()/nrealizations;
+    _dof[output_index] = degree_vector.sum();
+//    _dof[output_index] = degree_vector.sum()/nrealizations;
     std::cout << "regressionData_.getCovariates().cols() = " << regressionData_.getCovariates().cols() << std::endl;
     if (regressionData_.getCovariates().rows() != 0) {
         _dof[output_index] += regressionData_.getCovariates().cols();
