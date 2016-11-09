@@ -9,7 +9,7 @@ namespace LinearSolvers {
 
 	class MumpsSparse: public SpLinearSolver {
 		private:
-		static constexpr int _use_comm_world = -987654;
+		static constexpr int _use_comm_world = 5; //-987654;
 		static constexpr int _job_init = -1;
 		static constexpr int _job_end = -2;
 		static constexpr int _job_analyze = 1;
@@ -19,9 +19,12 @@ namespace LinearSolvers {
 		static constexpr int _job_factorize_solve = 5;
 		static constexpr int _job_all = 6;
 		int _myid;
+		MPI_Comm children;
+		int err[4];
 		DMUMPS_STRUC_C _id;
 		public:
 		MumpsSparse();
+		~MumpsSparse();
 		virtual void factorize(const Eigen::SparseMatrix<double> &);
 		virtual void solve(const Eigen::MatrixXd &);
 		virtual void setParameters(const ParameterList &list);
