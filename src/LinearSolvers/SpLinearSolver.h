@@ -3,21 +3,16 @@
 
 #include <Eigen/Sparse>
 #include <string>
-#include <list>
+#include <unordered_map>
+#include <utility>
 #include <memory>
 #include <iostream>
 
 namespace LinearSolvers {
 
 class AbstractParameter {
-	private:
-	std::string _name;
 	public:
-//	AbstractParameter() = default;
-	AbstractParameter(const std::string &name): _name(name) {};
 	virtual ~AbstractParameter() = default;
-	std::string getName() {return _name;}
-	void printInfo() {std::cout << "_name = " << _name;}
 };
 
 template <typename T>
@@ -25,31 +20,24 @@ class Parameter: public AbstractParameter {
 	private:
 	T _value;
 	public:
-//	Parameter() = default;
-	Parameter(const std::string &name, const T &value):
-		AbstractParameter(name),
-		_value(value) {};
+	Parameter(const T &value): _value(value) {};
 	void set(const T &value) {_value = value;}
 	T getValue() const {return _value;}
-	void printInfo() {
-		AbstractParameter::printInfo();
-		std::cout << "_value = " << _value;
+	void printInfo() const{
+		std::cout << "_value = " << _value << std::endl;;
 	}
 };
 
 class ParameterList {
 	private:
-	std::list<std::unique_ptr<AbstractParameter>> _list;
+	std::unordered_map<std::string, std::unique_ptr<AbstractParameter>> _map;
 	public:
-	typedef std::list<std::unique_ptr<AbstractParameter>>::const_iterator iterator;
 	ParameterList() = default;
 	template <typename T>
-	void push_back(const std::string &s, T value);
-	iterator begin() const;
-	iterator end() const;
-	std::string getName(const iterator &) const;
+	void set(const std::string &s, T value);
 	template <typename T>
-	T getValue(const iterator &) const;
+	T getValue(const std::string & name, T defaultValue) const;
+//	bool there_are(const std::string &s) const;
 };
 
 class SpLinearSolver {
@@ -64,16 +52,28 @@ class SpLinearSolver {
 };
 
 template <typename T>
-void ParameterList::push_back(const std::string &s, T value) {
-	_list.push_back(std::unique_ptr<Parameter<T>>(new Parameter<T>(s, value)));
-	_list.front()->printInfo();
+void ParameterList::set(const std::string &name, T value) {
+	std::unique_ptr<Parameter<T>> value_ptr(new Parameter<T>(value));
+	_map[name] = std::move(value_ptr);
 }
 
 template <typename T>
-T ParameterList::getValue(const ParameterList::iterator & it) const {
-	dynamic_cast<Parameter<T>*>(it->get())->getValue();
+T ParameterList::getValue(const std::string & name, T defaultValue) const {
+	auto iter = _map.find(name);
+	if (iter != _map.end()) {
+		auto abstract_ptr = iter->second.get();
+		auto concrete_ptr = dynamic_cast<Parameter<T>*>(abstract_ptr);
+		return concrete_ptr->getValue();
+	}
+	else {
+		return defaultValue;
+	}
 }
 
-}
+//bool ParameterList::there_are(const std::string &s) const {
+//	return _map.count(s);
+//}
+
+} // End namespace LinearSolvers
 
 #endif
