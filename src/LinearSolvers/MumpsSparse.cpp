@@ -16,13 +16,14 @@ MumpsSparse::MumpsSparse(const ParameterList &list) {
 void MumpsSparse::setDefault() {
 	_parallel_flag = false;
 	_children_is_empty = true;
-	_first_instance = true;
 	_id.sym = 0;
 	_id.par = 1;
 	_id.comm_fortran = _use_comm_world;
 	_nproc = 1;
 	_id.job = _job_init;
 	dmumps_c(&_id);
+	//qui
+	//_id.icntl[13]=100;
 }
 
 MumpsSparse::~MumpsSparse(){
@@ -107,7 +108,6 @@ void MumpsSparse::setParameters(const ParameterList &list) {
 		if (_nproc > 1) {
 			_parallel_flag = true;
 			MPI_Comm_spawn(CHILD_PATH, NULL, _nproc - par, MPI_INFO_NULL, 0, MPI_COMM_WORLD, &_children, err);
-			// ricordarsi di rimetterlo di la' nel makefile cosa? (CHILD_PATH)
 			MPI_Comm intracomm;
 			MPI_Intercomm_merge(_children, 0, &intracomm);
 			_children_is_empty = false;
@@ -142,16 +142,17 @@ void MumpsSparse::setParameters(const ParameterList &list) {
 	_id.icntl[27] = list.getValue<int>("icntl[28]", 0);
 	_id.icntl[30] = list.getValue<int>("icntl[31]", 0);
 	_id.icntl[31] = list.getValue<int>("icntl[32]", 0);
+
 	
-	if (_id.sym == 1 || _id.sym == 2) {
-		_id.cntl[0] = list.getValue<double>("cntl[1]", 0.01);
-	}
-	else {
-		_id.cntl[0] = list.getValue<double>("cntl[1]", 0);
-	}
-	double cntl1_default = sqrt(std::numeric_limits<double>::epsilon());
-	_id.cntl[1] = list.getValue<double>("cntl[2]", cntl1_default);
-	_id.cntl[3] = list.getValue<double>("cntl[4]", -1.0);
+	// if (_id.sym == 1 || _id.sym == 2) {
+	// 	_id.cntl[0] = list.getValue<double>("cntl[1]", 0.01);
+	// }
+	// else {
+	// 	_id.cntl[0] = list.getValue<double>("cntl[1]", 0);
+	// }
+	// double cntl1_default = sqrt(std::numeric_limits<double>::epsilon());
+	// _id.cntl[1] = list.getValue<double>("cntl[2]", cntl1_default);
+	// _id.cntl[3] = list.getValue<double>("cntl[4]", -1.0);
 }
 
 } // End Namespace LinearSolvers

@@ -20,7 +20,6 @@ namespace LinearSolvers {
 		static constexpr int _job_all = 6;
 		MPI_Comm _children;
 		bool _children_is_empty;
-		bool _first_instance;
 		bool _parallel_flag;
 		int _nproc;
 		int err[4];

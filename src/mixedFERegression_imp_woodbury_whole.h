@@ -357,6 +357,7 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(U
 	std::default_random_engine generator;
 	std::bernoulli_distribution distribution(0.5);
 	UInt nrealizations = regressionData_.getNrealizations();
+	std::cout << "Number of realizations = " << nrealizations << std::endl;
 	MatrixXr u(nlocations, nrealizations);
 	for (int j=0; j<nrealizations; ++j) {
 		for (int i=0; i<nlocations; ++i) {
@@ -734,6 +735,12 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::system_factorize() {
 	timer clock1, clock2;
 	std::cout << "Decomposing A" << std::endl;
 	clock1.start();
+	LinearSolvers::ParameterList list;
+	list.set("icntl[14]",100);
+	list.set("par",1);
+	list.set("nproc",2);
+	Adec_->setParameters(list);
+	std::cout << "parametri settati " << std::endl;
 	Adec_->factorize(A_);
 	clock1.stop();
 	std::cout << "Decomposing D" << std::endl;
