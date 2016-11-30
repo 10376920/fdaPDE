@@ -41,7 +41,6 @@ void MumpsSparse::factorize(const Eigen::SparseMatrix<double> &A) {
 	std::vector<int> jcn;
 	std::vector<double> a;
 	_id.n = A.cols();
-	_id.nz = A.nonZeros();
 	bool is_symmetric = (_id.sym == 1 || _id.sym == 2);
 	for (int j=0; j<A.outerSize(); ++j){
 		for (Eigen::SparseMatrix<double>::InnerIterator it(A,j); it; ++it){
@@ -53,6 +52,7 @@ void MumpsSparse::factorize(const Eigen::SparseMatrix<double> &A) {
 			}
 		}
 	}
+	_id.nz = irn.size();//A.nonZeros();
 	_id.irn=irn.data();
 	_id.jcn=jcn.data();
 	_id.a=a.data();
