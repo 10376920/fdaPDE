@@ -2,7 +2,7 @@
 #define __MIXEDFEREGRESSION_IMP_HPP__
 
 #include <iostream>
-#include<random>
+#include <random>
 #include "timing.h"
 #include <fstream>
 
@@ -334,30 +334,16 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::getRightHandData(VectorXr
 template<typename InputHandler, typename Integrator, UInt ORDER>
 void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(UInt output_index, Real lambda)
 {
-//	UInt nnodes = mesh_.num_nodes();
-//	UInt nlocations = regressionData_.getNumberofObservations();
-//	MatrixXr b = MatrixXr::Zero(2*nnodes,nnodes);
-//	b.topRows(nnodes) = psi_.transpose()*LeftMultiplybyQ(psi_);
-//	MatrixXr inv = system_solve(b);
-//	MatrixXr inv2 = inv.topRows(nnodes);
-//	std::ofstream output_file;
-//	output_file.open("inv_matrix.dat");
-//	output_file << inv2 << std::endl;
-//	output_file.close();
-	
-	
 	std::cout << "Starting GCV computation" << std::endl;
 	timer clock1;
 	clock1.start();
-
 	UInt nnodes = mesh_.num_nodes();
 	UInt nlocations = regressionData_.getNumberofObservations();
 
-	// genero matrice aleatoria
+	// Creation of the random matrix
 	std::default_random_engine generator;
 	std::bernoulli_distribution distribution(0.5);
 	UInt nrealizations = regressionData_.getNrealizations();
-	std::cout << "Number of realizations = " << nrealizations << std::endl;
 	MatrixXr u(nlocations, nrealizations);
 	for (int j=0; j<nrealizations; ++j) {
 		for (int i=0; i<nlocations; ++i) {
@@ -370,33 +356,37 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(U
 		}
 	}
 
+	// Define the first right hand side : | I  0 |^T * psi^T * Q * u
 	MatrixXr b = MatrixXr::Zero(2*nnodes,u.cols());
 	b.topRows(nnodes) = psi_.transpose()* LeftMultiplybyQ(u);
 
+	// Resolution of the system
 	MatrixXr x = system_solve(b);
+
 	MatrixXr uTpsi = u.transpose()*psi_;
 	VectorXr edf_vect(nrealizations);
-	std::ofstream output_file;
-	output_file.open("output_edf.dat");
 	Real q = 0;
+	Real var = 0;
+
+	// Degrees of freedom = q + E[ u^T * psi * | I  0 |* x ]
 	if (regressionData_.getCovariates().rows() != 0) {
 		q = regressionData_.getCovariates().cols();
 	}
-	Real var = 0;
+	// For any realization we calculate the degrees of freedom
 	for (int i=0; i<nrealizations; ++i) {
 		edf_vect(i) = uTpsi.row(i).dot(x.col(i).head(nnodes)) + q;
 		var += edf_vect(i)*edf_vect(i);
-		output_file << edf_vect(i) << "\n";
 	}
-	output_file.close();
+
+	// Estimates: sample mean, sample variance, sample standard variation
 	Real mean = edf_vect.sum()/nrealizations;
 	_dof[output_index] = mean;
 	var /= nrealizations;
 	var -= mean*mean;
 	Real std = sqrt(var);
 	std::cout << "edf mean = " << mean << std::endl;
-	std::cout << "edf var = " << var << std::endl;
-	std::cout << "edf std = " << std << std::endl;
+
+	std::cout << "Time required to compute the GCV" << std::endl;
 	clock1.stop();
 }
 
@@ -732,49 +722,73 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::buildA(const SpMat& Psi, 
 
 template<typename InputHandler, typename Integrator, UInt ORDER>
 void MixedFERegression<InputHandler,Integrator,ORDER>::system_factorize() {
-	timer clock1, clock2;
-	std::cout << "Decomposing A" << std::endl;
+
+	UInt nnodes = mesh_.num_nodes();
+	timer clock1;
 	clock1.start();
+
+	// First phase: Factorization of matrix A
+	std::cout << "Factorization of A" << std::endl;
+	
+	// Definition of a list of parameters for the solver
 	LinearSolvers::ParameterList list;
 	list.set("icntl[14]",100);
+	list.set("sym",2);
 	list.set("par",1);
 	list.set("nproc",2);
 	Adec_->setParameters(list);
-	std::cout << "parametri settati " << std::endl;
+	std::cout << "Parameters set" << std::endl;
+
+	// Invoke the factorization on matrix A
 	Adec_->factorize(A_);
-	clock1.stop();
-	std::cout << "Decomposing D" << std::endl;
-	clock2.start();
-	UInt nnodes = mesh_.num_nodes();
+	
+	// We access to this phase only if there are covariates, otherwise  G = 0 (?)
 	if (regressionData_.getCovariates().rows() != 0) {
+		// Second phase: factorization of matrix  G =  C + [V * A^-1 * U]
+		std::cout << "Factorization of G" << std::endl;
+
+		// Definition of matrix U = [ psi * W | 0 ]^T
 		MatrixXr W(this->regressionData_.getCovariates());
 		U_ = MatrixXr::Zero(2*nnodes, W.cols());
 		U_.topRows(nnodes) = psi_.transpose()*W;
 		Adec_->solve(U_);
-		MatrixXr G = -W.transpose()*W + U_.transpose()*Adec_->getSolution();
+
+		// D = U^T * A^-1 * U
+		MatrixXr D = U_.transpose()*Adec_->getSolution();
+		// G = C + D
+		MatrixXr G = -W.transpose()*W + D;
 		Gdec_.compute(G);
 	}
-	clock2.stop();
+
+	std::cout << "Time required to factorize the system" << std::endl;
+	clock1.stop();
 }
 
 template<typename InputHandler, typename Integrator, UInt ORDER>
 template<typename Derived>
 MatrixXr MixedFERegression<InputHandler,Integrator,ORDER>::system_solve(const Eigen::MatrixBase<Derived> &b) {
-	timer clock1, clock2;
-	std::cout << "Solving FEM: 1" << std::endl;
+	
+	timer clock1;
 	clock1.start();
+
+	// Resolution of the system A * x1 = b
+	std::cout << "Solving FEM: 1" << std::endl;
 	Adec_->solve(b);
 	MatrixXr x1 = Adec_->getSolution();
-	clock1.stop();
-	clock2.start();
+	
+	// We access to this phase only if there are covariates, otherwise the solution is x1
 	if (regressionData_.getCovariates().rows() != 0) {
 		std::cout << "Solving FEM: 2" << std::endl;
-		clock2.start();
+		// Resolution of G * x2 = U^T * x1
 		MatrixXr x2 = Gdec_.solve(U_.transpose()*x1);
+		// Resolution of the system A * x3 = U * x2
 		Adec_->solve(U_*x2);
+		// We add the latest result to the x1 we computed previously
 		x1 -= Adec_->getSolution();
-		clock2.stop();
 	}
+
+	std::cout << "Time required to solve the system" << std::endl;
+	clock1.stop();
 	return x1;
 }
 
