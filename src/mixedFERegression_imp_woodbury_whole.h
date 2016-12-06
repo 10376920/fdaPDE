@@ -5,6 +5,7 @@
 #include <random>
 #include "timing.h"
 #include <fstream>
+#include <chrono>
 
 
 ////build system matrix in sparse format SWest non serve??
@@ -330,7 +331,6 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::getRightHandData(VectorXr
 	}
 }
 
-
 template<typename InputHandler, typename Integrator, UInt ORDER>
 void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(UInt output_index, Real lambda)
 {
@@ -341,7 +341,8 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(U
 	UInt nlocations = regressionData_.getNumberofObservations();
 
 	// Creation of the random matrix
-	std::default_random_engine generator;
+	unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+	std::default_random_engine generator (seed);
 	std::bernoulli_distribution distribution(0.5);
 	UInt nrealizations = regressionData_.getNrealizations();
 	MatrixXr u(nlocations, nrealizations);
@@ -383,6 +384,7 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(U
 	_dof[output_index] = mean;
 	var /= nrealizations;
 	var -= mean*mean;
+	_var[output_index]=var;
 	Real std = sqrt(var);
 	std::cout << "edf mean = " << mean << std::endl;
 
@@ -444,6 +446,7 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::smoothLaplace()
 
     _solution.resize(regressionData_.getLambda().size());
     _dof.resize(regressionData_.getLambda().size());
+    _var.resize(regressionData_.getLambda().size());
 
     for(UInt i = 0; i<regressionData_.getLambda().size(); ++i)
 	{
@@ -731,13 +734,13 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::system_factorize() {
 	std::cout << "Factorization of A" << std::endl;
 	
 	// Definition of a list of parameters for the solver
-	LinearSolvers::ParameterList list;
+	/*LinearSolvers::ParameterList list;
 	list.set("icntl[14]",100);
 	list.set("sym",2);
 	list.set("par",1);
 	list.set("nproc",2);
 	Adec_->setParameters(list);
-	std::cout << "Parameters set" << std::endl;
+	std::cout << "Parameters set" << std::endl;*/
 
 	// Invoke the factorization on matrix A
 	Adec_->factorize(A_);

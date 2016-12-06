@@ -113,7 +113,12 @@ smooth.FEM.basis<-function(locations = NULL, observations, FEMbasis, lambda, cov
   if(GCV == TRUE)
   {
     seq=getGCV(locations = locations, observations = observations, fit.FEM = fit.FEM, covariates = covariates, edf = bigsol[[2]])
-    reslist=list(fit.FEM=fit.FEM,PDEmisfit.FEM=PDEmisfit.FEM, beta = beta, edf = bigsol[[2]], stderr = seq$stderr, GCV = seq$GCV)
+    if (length(bigsol)<=2){
+      reslist=list(fit.FEM=fit.FEM,PDEmisfit.FEM=PDEmisfit.FEM, beta = beta, edf = bigsol[[2]],stderr = seq$stderr, GCV = seq$GCV)
+    }
+    else{
+      reslist=list(fit.FEM=fit.FEM,PDEmisfit.FEM=PDEmisfit.FEM, beta = beta, edf = bigsol[[2]],var = bigsol[[3]], stderr = seq$stderr, GCV = seq$GCV)
+    }
   }else{
     reslist=list(fit.FEM=fit.FEM,PDEmisfit.FEM=PDEmisfit.FEM, beta = beta)
   }

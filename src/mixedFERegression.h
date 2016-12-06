@@ -51,6 +51,7 @@ class MixedFERegression{
 		VectorXr _b;                     //!A Eigen::VectorXr: Stores the system right hand side.
 		std::vector<VectorXr> _solution; //!A Eigen::VectorXr : Stores the system solution
 		std::vector<Real> _dof;
+		std::vector<Real> _var;
 
 		Eigen::PartialPivLU<MatrixXr> WTWinv_;
 		bool isWTWfactorized_;
@@ -73,7 +74,7 @@ class MixedFERegression{
 			LSProxy<LinearSolvers::EigenSparseLU> dummy1("EigenSparseLU");
 			LSProxy<LinearSolvers::MumpsSparse> dummy2("MumpsSparse");
 			LSFactory & LSfactory=LSFactory::Instance();
-			Adec_ = LSfactory.create("MumpsSparse"); //TODO get name from input
+			Adec_ = LSfactory.create("EigenSparseLU"); //TODO get name from input
 		};
 		
 		//!A Destructor
@@ -114,6 +115,8 @@ class MixedFERegression{
 		//! A inline member that returns a VectorXr, returns the whole _solution. 
 		inline std::vector<VectorXr> const & getSolution() const{return _solution;};
 		inline std::vector<Real> const & getDOF() const{return _dof;};
+		inline std::vector<Real> const & getVar() const{return _var;};
+
 		//Real eval_sol(MeshTria const & mesh,VectorXr Point p);
 		//! A member for printing the solution.
 		//void printSolution(std::ostream & out) {out<<_solution; out<<"dim"<<_solution.rows()<<"x"<<_solution.cols();};

@@ -45,10 +45,13 @@ SEXP regression_Laplace(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Ro
 
 		const std::vector<VectorXr>& solution = regression.getSolution();
 		const std::vector<Real>& dof = regression.getDOF();
+		const std::vector<Real>& var = regression.getVar();
+
 		//Copy result in R memory
-		result = PROTECT(Rf_allocVector(VECSXP, 2));
+		result = PROTECT(Rf_allocVector(VECSXP, 3));
 		SET_VECTOR_ELT(result, 0, Rf_allocMatrix(REALSXP, solution[0].size(), solution.size()));
 		SET_VECTOR_ELT(result, 1, Rf_allocVector(REALSXP, solution.size()));
+		SET_VECTOR_ELT(result, 2, Rf_allocVector(REALSXP, solution.size()));
 
 		Real *rans = REAL(VECTOR_ELT(result, 0));
 		for(UInt j = 0; j < solution.size(); j++)
@@ -62,6 +65,13 @@ SEXP regression_Laplace(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Ro
 		{
 			rans2[i] = dof[i];
 		}
+
+		Real *rans3 = REAL(VECTOR_ELT(result, 2));
+		for(UInt i = 0; i < solution.size(); i++)
+		{
+			rans3[i] = var[i];
+		}
+		
 		UNPROTECT(1);
 
     }
@@ -75,10 +85,12 @@ SEXP regression_Laplace(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Ro
 
 		const std::vector<VectorXr>& solution = regression.getSolution();
 		const std::vector<Real>& dof = regression.getDOF();
+		const std::vector<Real>& var = regression.getVar();
 		//Copy result in R memory
-		result = PROTECT(Rf_allocVector(VECSXP, 2));
+		result = PROTECT(Rf_allocVector(VECSXP, 3));
 		SET_VECTOR_ELT(result, 0, Rf_allocMatrix(REALSXP, solution[0].size(), solution.size()));
 		SET_VECTOR_ELT(result, 1, Rf_allocVector(REALSXP, solution.size()));
+		SET_VECTOR_ELT(result, 2, Rf_allocVector(REALSXP, solution.size()));
 
 		Real *rans = REAL(VECTOR_ELT(result, 0));
 		for(UInt j = 0; j < solution.size(); j++)
@@ -92,6 +104,13 @@ SEXP regression_Laplace(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Ro
 		{
 			rans2[i] = dof[i];
 		}
+
+		Real *rans3 = REAL(VECTOR_ELT(result, 2));
+		for(UInt i = 0; i < solution.size(); i++)
+		{
+			rans3[i] = var[i];
+		}
+		
 		UNPROTECT(1);
     }
 
