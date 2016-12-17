@@ -1,6 +1,6 @@
 #dyn.load("../Release/fdaPDE.so")
 
-CPP_smooth.FEM.basis<-function(locations, observations, FEMbasis, lambda, covariates = NULL, BC = NULL, GCV, nrealizations = 100)
+CPP_smooth.FEM.basis<-function(locations, observations, FEMbasis, lambda, covariates = NULL, BC = NULL, GCV, GCVmethod = 2, nrealizations = 100, RNGstate = "")
 {
   # Indexes in C++ starts from 0, in R from 1, opportune transformation
   ##TO BE CHANGED SOON: LOW PERFORMANCES, IMPLIES COPY OF PARAMETERS
@@ -51,12 +51,14 @@ CPP_smooth.FEM.basis<-function(locations, observations, FEMbasis, lambda, covari
   GCV = as.integer(GCV)
   storage.mode(GCV)<-"integer"
   storage.mode(nrealizations) = "integer"
-  
+  storage.mode(RNGstate) = "character"
+  storage.mode(GCVmethod) = "integer"
+
   ## Call C++ function
   bigsol <- .Call("regression_Laplace", locations, observations, FEMbasis$mesh, 
                   FEMbasis$order, lambda, covariates,
-                  BC$BC_indices, BC$BC_values, GCV, nrealizations)
-#                  ,package = "fdaPDE")
+                  BC$BC_indices, BC$BC_values, GCV, GCVmethod, nrealizations, RNGstate
+                  ,package = "fdaPDE2")
   
   ## Reset them correctly
   #fdobj$basis$params$mesh$triangles = fdobj$basis$params$mesh$triangles + 1
@@ -65,7 +67,7 @@ CPP_smooth.FEM.basis<-function(locations, observations, FEMbasis, lambda, covari
   return(bigsol)
 }
 
-CPP_smooth.FEM.PDE.basis<-function(locations, observations, FEMbasis, lambda, PDE_parameters, covariates = NULL, BC = NULL, GCV, nrealizations = 100)
+CPP_smooth.FEM.PDE.basis<-function(locations, observations, FEMbasis, lambda, PDE_parameters, covariates = NULL, BC = NULL, GCV, GCVmethod = 2, nrealizations = 100, RNGstate = "")
 {
 
   # Indexes in C++ starts from 0, in R from 1, opportune transformation  
@@ -116,6 +118,8 @@ CPP_smooth.FEM.PDE.basis<-function(locations, observations, FEMbasis, lambda, PD
   storage.mode(BC$BC_values)<-"double"
   storage.mode(GCV)<-"integer"
   storage.mode(nrealizations) = "integer"
+  storage.mode(RNGstate) = "character"
+  storage.mode(GCVmethod) = "integer"
   
   storage.mode(PDE_parameters$K)<-"double"
   storage.mode(PDE_parameters$b)<-"double"
@@ -124,8 +128,8 @@ CPP_smooth.FEM.PDE.basis<-function(locations, observations, FEMbasis, lambda, PD
   ## Call C++ function
   bigsol <- .Call("regression_PDE", locations, observations, FEMbasis$mesh, 
                   FEMbasis$order, lambda, PDE_parameters$K, PDE_parameters$b, PDE_parameters$c, covariates,
-                  BC$BC_indices, BC$BC_values, GCV, nrealizations)
- #                 ,package = "fdaPDE")
+                  BC$BC_indices, BC$BC_values, GCV, GCVmethod, nrealizations, RNGstate
+                  ,package = "fdaPDE2")
   
   ## Reset them correctly
   #fdobj$basis$params$mesh$triangles = fdobj$basis$params$mesh$triangles + 1
@@ -134,7 +138,7 @@ CPP_smooth.FEM.PDE.basis<-function(locations, observations, FEMbasis, lambda, PD
   return(bigsol)
 }
 
-CPP_smooth.FEM.PDE.sv.basis<-function(locations, observations, FEMbasis, lambda, PDE_parameters, covariates = NULL, BC = NULL, GCV, nrealizations = 100)
+CPP_smooth.FEM.PDE.sv.basis<-function(locations, observations, FEMbasis, lambda, PDE_parameters, covariates = NULL, BC = NULL, GCV, GCVmethod = 2, nrealizations = 100, RNGstate = "")
 {
   
   # Indexes in C++ starts from 0, in R from 1, opportune transformation
@@ -193,6 +197,8 @@ CPP_smooth.FEM.PDE.sv.basis<-function(locations, observations, FEMbasis, lambda,
   storage.mode(BC$BC_values)<-"double"
   storage.mode(GCV)<-"integer"
   storage.mode(nrealizations) = "integer"
+  storage.mode(RNGstate) = "character"
+  storage.mode(GCVmethod) = "integer"
   
   storage.mode(PDE_param_eval$K)<-"double"
   storage.mode(PDE_param_eval$b)<-"double"
@@ -202,8 +208,8 @@ CPP_smooth.FEM.PDE.sv.basis<-function(locations, observations, FEMbasis, lambda,
   ## Call C++ function
   bigsol <- .Call("regression_PDE_space_varying", locations, observations, FEMbasis$mesh, 
                   FEMbasis$order, lambda, PDE_param_eval$K, PDE_param_eval$b, PDE_param_eval$c, PDE_param_eval$u, covariates,
-                  BC$BC_indices, BC$BC_values, GCV, nrealizations)
-#                  ,package = "fdaPDE")
+                  BC$BC_indices, BC$BC_values, GCV, GCVmethod, nrealizations, RNGstate
+                  ,package = "fdaPDE2")
   
   ## Reset them correctly
   #fdobj$basis$params$mesh$triangles = fdobj$basis$params$mesh$triangles + 1

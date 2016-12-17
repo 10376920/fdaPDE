@@ -60,7 +60,7 @@
 #' print(ZincMeuseCovar$beta)
 
 
-smooth.FEM.basis<-function(locations = NULL, observations, FEMbasis, lambda, covariates = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE, nrealizations = 100)
+smooth.FEM.basis<-function(locations = NULL, observations, FEMbasis, lambda, covariates = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE, GCVmethod = 2, nrealizations = 100, RNGstate = "")
 {
  
   ##################### Checking parameters, sizes and conversion ################################
@@ -96,7 +96,7 @@ smooth.FEM.basis<-function(locations = NULL, observations, FEMbasis, lambda, cov
   }else
   {
     print('C++ Code Execution')
-    bigsol = CPP_smooth.FEM.basis(locations, observations, FEMbasis, lambda, covariates, BC, GCV, nrealizations)
+    bigsol = CPP_smooth.FEM.basis(locations, observations, FEMbasis, lambda, covariates, BC, GCV, GCVmethod, nrealizations, RNGstate)
   }
   
   numnodes = nrow(FEMbasis$mesh$nodes)
@@ -113,12 +113,7 @@ smooth.FEM.basis<-function(locations = NULL, observations, FEMbasis, lambda, cov
   if(GCV == TRUE)
   {
     seq=getGCV(locations = locations, observations = observations, fit.FEM = fit.FEM, covariates = covariates, edf = bigsol[[2]])
-    if (length(bigsol)<=2){
-      reslist=list(fit.FEM=fit.FEM,PDEmisfit.FEM=PDEmisfit.FEM, beta = beta, edf = bigsol[[2]],stderr = seq$stderr, GCV = seq$GCV)
-    }
-    else{
-      reslist=list(fit.FEM=fit.FEM,PDEmisfit.FEM=PDEmisfit.FEM, beta = beta, edf = bigsol[[2]],var = bigsol[[3]], stderr = seq$stderr, GCV = seq$GCV)
-    }
+    reslist=list(fit.FEM=fit.FEM,PDEmisfit.FEM=PDEmisfit.FEM, beta = beta, edf = bigsol[[2]], var = bigsol[[3]], RNGstate = bigsol[[4]], stderr = seq$stderr, GCV = seq$GCV)
   }else{
     reslist=list(fit.FEM=fit.FEM,PDEmisfit.FEM=PDEmisfit.FEM, beta = beta)
   }
@@ -186,7 +181,7 @@ smooth.FEM.basis<-function(locations = NULL, observations, FEMbasis, lambda, cov
 #' 
 #' # Evaluate solution in three points
 #' eval.FEM(FEM_CPP_PDE$fit.FEM, locations = rbind(c(0,0),c(0.5,0),c(-2,-2)))
-smooth.FEM.PDE.basis<-function(locations = NULL, observations, FEMbasis, lambda, PDE_parameters, covariates = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE, nrealizations = 100)
+smooth.FEM.PDE.basis<-function(locations = NULL, observations, FEMbasis, lambda, PDE_parameters, covariates = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE, GCVmethod = 2, nrealizations = 100, RNGstate = "")
 {
   ##################### Checking parameters, sizes and conversion ################################
   checkSmoothingParameters(locations, observations, FEMbasis, lambda, covariates, BC, GCV, CPP_CODE, PDE_parameters_constant = PDE_parameters, PDE_parameters_func = NULL)
@@ -223,7 +218,7 @@ smooth.FEM.PDE.basis<-function(locations = NULL, observations, FEMbasis, lambda,
   }else
   {
     print('C++ Code Execution')
-    bigsol = CPP_smooth.FEM.PDE.basis(locations, observations, FEMbasis, lambda, PDE_parameters, covariates, BC, GCV, nrealizations)
+    bigsol = CPP_smooth.FEM.PDE.basis(locations, observations, FEMbasis, lambda, PDE_parameters, covariates, BC, GCV, GCVmethod, nrealizations, RNGstate)
   }
   
   numnodes = nrow(FEMbasis$mesh$nodes)
@@ -240,7 +235,7 @@ smooth.FEM.PDE.basis<-function(locations = NULL, observations, FEMbasis, lambda,
   if(GCV == TRUE)
   {
     seq=getGCV(locations = locations, observations = observations, fit.FEM = fit.FEM, covariates = covariates, edf = bigsol[[2]])
-    reslist=list(fit.FEM=fit.FEM,PDEmisfit.FEM=PDEmisfit.FEM, beta = beta, edf = bigsol[[2]], stderr = seq$stderr, GCV = seq$GCV)
+    reslist=list(fit.FEM=fit.FEM,PDEmisfit.FEM=PDEmisfit.FEM, beta = beta, edf = bigsol[[2]], var = bigsol[[3]], RNGstate = bigsol[[4]], stderr = seq$stderr, GCV = seq$GCV)
   }else{
     reslist=list(fit.FEM=fit.FEM,PDEmisfit.FEM=PDEmisfit.FEM, beta = beta)
   }
@@ -335,7 +330,7 @@ smooth.FEM.PDE.basis<-function(locations = NULL, observations, FEMbasis, lambda,
 #' FEM_CPP_PDE = smooth.FEM.PDE.sv.basis(observations = observations, 
 #'              FEMbasis = FEMbasis, lambda = lambda, PDE_parameters = PDE_parameters)
 #' plot(FEM_CPP_PDE$fit.FEM)
-smooth.FEM.PDE.sv.basis<-function(locations = NULL, observations, FEMbasis, lambda, PDE_parameters, covariates = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE, nrealizations = 100)
+smooth.FEM.PDE.sv.basis<-function(locations = NULL, observations, FEMbasis, lambda, PDE_parameters, covariates = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE, GCVmethod = 2, nrealizations = 100, RNGstate = "")
 {
   ##################### Checking parameters, sizes and conversion ################################
   checkSmoothingParameters(locations, observations, FEMbasis, lambda, covariates, BC, GCV, CPP_CODE, PDE_parameters_constant = NULL, PDE_parameters_func = PDE_parameters)
@@ -364,7 +359,7 @@ smooth.FEM.PDE.sv.basis<-function(locations = NULL, observations, FEMbasis, lamb
   }else
   {
     print('C++ Code Execution')
-    bigsol = CPP_smooth.FEM.PDE.sv.basis(locations, observations, FEMbasis, lambda, PDE_parameters, covariates, BC, GCV, nrealizations)
+    bigsol = CPP_smooth.FEM.PDE.sv.basis(locations, observations, FEMbasis, lambda, PDE_parameters, covariates, BC, GCV, GCVmethod, nrealizations, RNGstate)
   }
   
   numnodes = nrow(FEMbasis$mesh$nodes)
@@ -381,7 +376,7 @@ smooth.FEM.PDE.sv.basis<-function(locations = NULL, observations, FEMbasis, lamb
   if(GCV == TRUE)
   {
     seq=getGCV(locations = locations, observations = observations, fit.FEM = fit.FEM, covariates = covariates, edf = bigsol[[2]])
-    reslist=list(fit.FEM=fit.FEM,PDEmisfit.FEM=PDEmisfit.FEM, beta = beta, edf = bigsol[[2]], stderr = seq$stderr, GCV = seq$GCV)
+    reslist=list(fit.FEM=fit.FEM,PDEmisfit.FEM=PDEmisfit.FEM, beta = beta, edf = bigsol[[2]], var = bigsol[[3]], RNGstate = bigsol[[4]], stderr = seq$stderr, GCV = seq$GCV)
   }else{
     reslist=list(fit.FEM=fit.FEM,PDEmisfit.FEM=PDEmisfit.FEM, beta = beta)
   }

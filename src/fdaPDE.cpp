@@ -27,10 +27,10 @@ extern "C" {
 */
 
 SEXP regression_Laplace(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Rorder, SEXP Rlambda,
-				   SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP Rnrealizations)
+				   SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations, SEXP RRNGstate)
 {
     //Set data
-	RegressionData regressionData(Rlocations, Robservations, Rorder, Rlambda, Rcovariates, RBCIndices, RBCValues, DOF, Rnrealizations);
+	RegressionData regressionData(Rlocations, Robservations, Rorder, Rlambda, Rcovariates, RBCIndices, RBCValues, DOF, RGCVmethod, Rnrealizations, RRNGstate);
 
 	//std::cout<< "Data loaded"<<std::endl;
 	SEXP result = NILSXP;
@@ -48,10 +48,11 @@ SEXP regression_Laplace(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Ro
 		const std::vector<Real>& var = regression.getVar();
 
 		//Copy result in R memory
-		result = PROTECT(Rf_allocVector(VECSXP, 3));
+		result = PROTECT(Rf_allocVector(VECSXP, 4));
 		SET_VECTOR_ELT(result, 0, Rf_allocMatrix(REALSXP, solution[0].size(), solution.size()));
 		SET_VECTOR_ELT(result, 1, Rf_allocVector(REALSXP, solution.size()));
 		SET_VECTOR_ELT(result, 2, Rf_allocVector(REALSXP, solution.size()));
+		SET_VECTOR_ELT(result, 3, Rf_allocVector(STRSXP, 1));
 
 		Real *rans = REAL(VECTOR_ELT(result, 0));
 		for(UInt j = 0; j < solution.size(); j++)
@@ -71,7 +72,10 @@ SEXP regression_Laplace(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Ro
 		{
 			rans3[i] = var[i];
 		}
-		
+
+		std::string RNGstate = regression.getFinalRNGstate();
+		SET_STRING_ELT(VECTOR_ELT(result, 3), 0, Rf_mkChar(RNGstate.c_str()));
+
 		UNPROTECT(1);
 
     }
@@ -118,10 +122,10 @@ SEXP regression_Laplace(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Ro
 }
 
 SEXP regression_PDE(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Rorder, SEXP Rlambda, SEXP RK, SEXP Rbeta, SEXP Rc,
-				   SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP Rnrealizations)
+				   SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations, SEXP RRNGstate)
 {
     //Set data
-	RegressionDataElliptic regressionData(Rlocations, Robservations, Rorder, Rlambda, RK, Rbeta, Rc, Rcovariates, RBCIndices, RBCValues, DOF, Rnrealizations);
+	RegressionDataElliptic regressionData(Rlocations, Robservations, Rorder, Rlambda, RK, Rbeta, Rc, Rcovariates, RBCIndices, RBCValues, DOF, RGCVmethod, Rnrealizations, RRNGstate);
 
 	//std::cout<< "Data loaded"<<std::endl;
 	SEXP result = NILSXP;
@@ -193,10 +197,10 @@ SEXP regression_PDE(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Rorder
 
 
 SEXP regression_PDE_space_varying(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Rorder, SEXP Rlambda, SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Ru,
-				   SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP Rnrealizations)
+				   SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations, SEXP RRNGstate)
 {
     //Set data
-	RegressionDataEllipticSpaceVarying regressionData(Rlocations, Robservations, Rorder, Rlambda, RK, Rbeta, Rc, Ru, Rcovariates, RBCIndices, RBCValues, DOF, Rnrealizations);
+	RegressionDataEllipticSpaceVarying regressionData(Rlocations, Robservations, Rorder, Rlambda, RK, Rbeta, Rc, Ru, Rcovariates, RBCIndices, RBCValues, DOF, RGCVmethod, Rnrealizations, RRNGstate);
 
 	//regressionData.print();
 

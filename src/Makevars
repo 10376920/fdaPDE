@@ -1,2 +1,4 @@
-PKG_CPPFLAGS = -lstdc++ -I../inst/include
-CXX_STD = CXX11
+PKG_CPPFLAGS = -I./LinearSolvers/ -I./LinearSolvers/MumpsSparse/ -I./LinearSolvers/EigenSparseLU -I../Eigen -DCHILD_PATH='"${R_PACKAGE_DIR}/bin/child"'
+PKG_CXXFLAGS = -std=c++11
+PKG_CFLAGS = -std=c99
+PKG_LIBS = -ldmumps

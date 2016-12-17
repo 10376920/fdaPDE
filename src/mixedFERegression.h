@@ -10,13 +10,10 @@
 #include "solver.h"
 #include <memory>
 //#include "LinearSolvers/SpLinearSolver.h"
-#include "LinearSolvers/EigenSparseLU.h"
-#include "LinearSolvers/MumpsSparse.h"
+#include "EigenSparseLU.h"
+#include "MumpsSparse.h"
 #include "Proxy.hpp"
 #include "Factory.hpp"
-
-
-
 
 //! A LinearSystem class: A class for the linear system construction and resolution.
 
@@ -52,6 +49,7 @@ class MixedFERegression{
 		std::vector<VectorXr> _solution; //!A Eigen::VectorXr : Stores the system solution
 		std::vector<Real> _dof;
 		std::vector<Real> _var;
+		std::string _finalRNGstate;
 
 		Eigen::PartialPivLU<MatrixXr> WTWinv_;
 		bool isWTWfactorized_;
@@ -60,7 +58,7 @@ class MixedFERegression{
 		void setQ();
 		void setH();
 
-		void buildCoeffMatrix(const SpMat& DMat,  const SpMat& AMat,  const SpMat& MMat);
+		void buildCoeffMatrix(const MatrixXr& DMat,  const SpMat& AMat,  const SpMat& MMat);
 		void buildA(const SpMat& Psi,  const SpMat& AMat,  const SpMat& MMat);
 		MatrixXr LeftMultiplybyQ(const MatrixXr& u);
 
@@ -116,6 +114,7 @@ class MixedFERegression{
 		inline std::vector<VectorXr> const & getSolution() const{return _solution;};
 		inline std::vector<Real> const & getDOF() const{return _dof;};
 		inline std::vector<Real> const & getVar() const{return _var;};
+		inline std::string const & getFinalRNGstate() const{return _finalRNGstate;}
 
 		//Real eval_sol(MeshTria const & mesh,VectorXr Point p);
 		//! A member for printing the solution.
@@ -133,43 +132,11 @@ class MixedFERegression{
 		void getDataMatrix(SpMat& DMat);
 		void getDataMatrixByIndices(SpMat& DMat);
 		void getRightHandData(VectorXr& rightHandData);
-#ifdef ORIGINAL_VERSION
-		void computeDegreesOfFreedom(UInt output_index);
-#else
-        void computeDegreesOfFreedom(UInt output_index, Real lambda);
-#endif
+		void computeDegreesOfFreedom(UInt output_index, Real lambda);
+		void computeDegreesOfFreedomExact(UInt output_index, Real lambda);
+		void computeDegreesOfFreedomStochastic(UInt output_index, Real lambda);
 };
 
-#ifdef ORIGINAL_VERSION
-#include "mixedFERegression_imp_original.h"
-#endif
-
-#ifdef SCHUR_VERSION
-#include "mixedFERegression_imp_SCHUR.h"
-#endif
-
-//#ifdef MUMPS_VERSION
-//#include "mixedFERegression_imp_MUMPS.h"
-//#endif
-
-#ifdef MUMPS_WHOLE_VERSION
-#include "mixedFERegression_imp_mumps_whole.h"
-#endif
-
-#ifdef STOCHASTIC_VERSION
-#include "mixedFERegression_imp_stochastic.h"
-#endif
-
-#ifdef TEMP_VERSION
-#include "mixedFERegression_imp_temp.h"
-#endif
-
-#ifdef WOODBURY_WHOLE_VERSION
 #include "mixedFERegression_imp_woodbury_whole.h"
-#endif
-
-#ifdef WOODBURY_DECOMPOSEQ_VERSION
-#include "mixedFERegression_imp_woodbury_decomposeQ.h"
-#endif
 
 #endif

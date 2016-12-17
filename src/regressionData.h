@@ -4,6 +4,7 @@
 #include "fdaPDE.h"
 #include "mesh_objects.h"
 #include "param_functors.h"
+#include <string>
 
 //!  An IO handler class for objects passed from R
 /*!
@@ -30,7 +31,9 @@ class  RegressionData{
 		//Other parameters
 		UInt order_;
 		std::vector<Real> lambda_;
-		UInt nrealizations_;
+		UInt GCVmethod_;
+		UInt nrealizations_;      // Number of relizations for the stochastic estimation of GCV
+		std::string RNGstate_;    // State at which the random number generator should be set
 
 		std::vector<Real> bc_values_;
 		std::vector<UInt> bc_indices_;
@@ -43,6 +46,7 @@ class  RegressionData{
 		void setObservations(SEXP Robservations);
 		void setCovariates(SEXP Rcovariates);
 		void setNrealizations(SEXP Rnrealizations);
+		void setRNGstate(SEXP RRNGstate);
 		#endif
 
 	public:
@@ -79,7 +83,7 @@ class  RegressionData{
 
 		#ifdef R_VERSION_
 		explicit RegressionData(SEXP Rlocations, SEXP Robservations, SEXP Rorder, SEXP Rlambda, SEXP Rcovariates,
-				   SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP Rnrealizations);
+				   SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations, SEXP RRNGstate);
 		#endif
 
 		explicit RegressionData(std::vector<Point>& locations, VectorXr& observations, UInt order, std::vector<Real> lambda, MatrixXr& covariates , std::vector<UInt>& bc_indices, std::vector<Real>& bc_values, bool DOF);
@@ -108,8 +112,14 @@ class  RegressionData{
 		inline std::vector<UInt> const & getDirichletIndices() const {return bc_indices_;}
 		//! A method returning the values to apply for Dirichlet Conditions
 		inline std::vector<Real> const & getDirichletValues() const {return bc_values_;}
+		//! A method returning the method that should be used to compute the GCV:
+		//! 1: exact calculation
+		//! 2: stochastic estimation
+		inline UInt const & getGCVmethod() const {return GCVmethod_;}
 		//! A method returning the number of vectors to use to stochastically estimate the edf
 		inline UInt const & getNrealizations() const {return nrealizations_;}
+		//! A method returning the state of the random number generator
+		inline std::string const & getRNGstate() const {return RNGstate_;}
 };
 
 
@@ -123,7 +133,7 @@ class  RegressionDataElliptic:public RegressionData
 	public:
 		#ifdef R_VERSION_
 		explicit RegressionDataElliptic(SEXP Rlocations, SEXP Robservations, SEXP Rorder, SEXP Rlambda, SEXP RK, SEXP Rbeta,
-				 SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP Rnrealizations);
+				 SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations, SEXP RRNGstate);
 		#endif
 
 		explicit RegressionDataElliptic(std::vector<Point>& locations, VectorXr& observations, UInt order, std::vector<Real> lambda, Eigen::Matrix<Real,2,2>& K,	Eigen::Matrix<Real,2,1>& beta,
@@ -145,7 +155,7 @@ class RegressionDataEllipticSpaceVarying:public RegressionData
 	public:
 		#ifdef R_VERSION_
 		explicit RegressionDataEllipticSpaceVarying(SEXP Rlocations, SEXP Robservations, SEXP Rorder, SEXP Rlambda, SEXP RK, SEXP Rbeta,
-				 SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP Rnrealizations);
+				 SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations, SEXP RRNGstate);
 		#endif
 
 

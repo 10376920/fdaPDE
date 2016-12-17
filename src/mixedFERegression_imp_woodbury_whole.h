@@ -7,6 +7,11 @@
 #include <fstream>
 #include <chrono>
 
+#include "mpi.h"
+#include "dmumps_c.h"
+#define JOB_INIT -1
+#define JOB_END -2
+#define USE_COMM_WORLD -987654
 
 ////build system matrix in sparse format SWest non serve??
 //void MixedFE::build(SpMat & L, SpMat& opMat, SpMat& opMat2, SpMat& mass, const VectorXr& righthand, const VectorXr& forcing_term )
@@ -79,7 +84,7 @@
 //}
 
 template<typename InputHandler, typename Integrator, UInt ORDER>
-void MixedFERegression<InputHandler,Integrator,ORDER>::buildCoeffMatrix(const SpMat& DMat,  const SpMat& AMat,  const SpMat& MMat)
+void MixedFERegression<InputHandler,Integrator,ORDER>::buildCoeffMatrix(const MatrixXr& DMat,  const SpMat& AMat,  const SpMat& MMat)
 {
 	//I reserve the exact memory for the nonzero entries of each row of the coeffmatrix for boosting performance
 	//_coeffmatrix.setFromTriplets(tripletA.begin(),tripletA.end());
@@ -87,13 +92,14 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::buildCoeffMatrix(const Sp
 	UInt nnodes = mesh_.num_nodes();
 
 	std::vector<coeff> tripletAll;
-	tripletAll.reserve(DMat.nonZeros() + 2*AMat.nonZeros() + MMat.nonZeros());
+	tripletAll.reserve(DMat.rows()*DMat.cols() + 2*AMat.nonZeros() + MMat.nonZeros());
 
-	for (int k=0; k<DMat.outerSize(); ++k)
-	  for (SpMat::InnerIterator it(DMat,k); it; ++it)
+	for (int j=0; j<DMat.cols(); ++j) {
+	  for (int i=0; i<DMat.rows(); ++i)
 	  {
-		  tripletAll.push_back(coeff(it.row(), it.col(),it.value()));
+		  tripletAll.push_back(coeff(i, j, DMat(i, j)));
 	  }
+	}
 	for (int k=0; k<MMat.outerSize(); ++k)
 	  for (SpMat::InnerIterator it(MMat,k); it; ++it)
 	  {
@@ -334,15 +340,185 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::getRightHandData(VectorXr
 template<typename InputHandler, typename Integrator, UInt ORDER>
 void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(UInt output_index, Real lambda)
 {
-	std::cout << "Starting GCV computation" << std::endl;
+	int GCVmethod = regressionData_.getGCVmethod();
+	switch (GCVmethod) {
+		case 1:
+			computeDegreesOfFreedomExact(output_index, lambda);
+			break;
+		case 2:
+			computeDegreesOfFreedomStochastic(output_index, lambda);
+			break;
+	}
+}
+
+template<typename InputHandler, typename Integrator, UInt ORDER>
+void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedomExact(UInt output_index, Real lambda)
+{
+   	timer clock;
+	clock.start();
+    UInt nnodes = mesh_.num_nodes();
+	UInt nlocations = regressionData_.getNumberofObservations();
+    Real degrees=0;
+
+	MatrixXr DMat = psi_.transpose() * LeftMultiplybyQ(psi_);
+    //if caso bello bello
+    if (regressionData_.isLocationsByNodes() && regressionData_.getCovariates().rows() == 0 )
+    {
+    	buildCoeffMatrix(DMat, AMat_, MMat_);
+        auto k = regressionData_.getObservationsIndices();
+        DMUMPS_STRUC_C id;
+        int myid, ierr;
+        ierr = MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+
+        id.sym=0;
+        id.par=1;
+        id.job=JOB_INIT;
+        id.comm_fortran=USE_COMM_WORLD;
+        dmumps_c(&id);
+
+        std::vector<int> irn;
+        std::vector<int> jcn;
+        std::vector<double> a;
+        std::vector<int> irhs_ptr;
+        std::vector<int> irhs_sparse;
+        double* rhs_sparse= (double*)malloc(nlocations*sizeof(double));
+        
+        if( myid==0){
+            id.n=2*nnodes;
+            for (int j=0; j<_coeffmatrix.outerSize(); ++j){
+                for (SpMat::InnerIterator it(_coeffmatrix,j); it; ++it){
+                	
+                    irn.push_back(it.row()+1);
+                    jcn.push_back(it.col()+1);
+                    a.push_back(it.value());
+                }
+            }
+        }
+        id.nz=irn.size();
+        id.irn=irn.data();
+        id.jcn=jcn.data();
+        id.a=a.data();
+        id.nz_rhs=nlocations;
+        id.nrhs=2*nnodes;
+        int j = 1;
+        irhs_ptr.push_back(j);
+        for (int l=0; l<k[0]-1; ++l) {
+            irhs_ptr.push_back(j);
+        }
+        for (int i=0; i<k.size()-1; ++i) {
+            ++j;
+            for (int l=0; l<k[i+1]-k[i]; ++l) {
+                irhs_ptr.push_back(j);
+            }
+        }
+        ++j;
+        for (int i=k[k.size()-1]; i < id.nrhs; ++i) {
+            irhs_ptr.push_back(j);
+        }
+        for (int i=0; i<nlocations; ++i){
+            irhs_sparse.push_back(k[i]+1);
+        }
+        id.irhs_sparse=irhs_sparse.data();
+        id.irhs_ptr=irhs_ptr.data();
+        id.rhs_sparse=rhs_sparse;
+
+        #define ICNTL(I) icntl[(I)-1]
+//        id.ICNTL(1)=-1;
+//        id.ICNTL(2)=-1;
+//        id.ICNTL(3)=-1;
+//        id.ICNTL(4)=0;
+        id.ICNTL(5)=0;
+        id.ICNTL(18)=0;
+        id.ICNTL(20)=1;
+        id.ICNTL(30)=1;
+
+        id.job=6;
+        dmumps_c(&id);
+        id.job=JOB_END;
+        dmumps_c(&id);
+
+        if (myid==0){
+            std::cout << "rhs = " << std::endl;
+            for (int i=0; i< nlocations; ++i){
+                std::cout << rhs_sparse[i] << std::endl;
+                degrees+=rhs_sparse[i];
+            }
+        }
+        free(rhs_sparse);
+    }
+    else{ //non siamo nel caso 4 => montare i solver   
+
+        Eigen::SparseLU<SpMat> solver;
+        solver.compute(MMat_);
+        SpMat U = solver.solve(AMat_);
+        MatrixXr Ud = MatrixXr(U);
+        auto k = regressionData_.getObservationsIndices();
+        SpMat tempSparse = lambda*AMat_.transpose()*U;
+		MatrixXr temp = MatrixXr(tempSparse);
+		
+        //MatrixXr Td = MatrixXr(DMat + lambda*AMat_.transpose()*U);
+        MatrixXr Td = DMat + temp;
+        Eigen::LLT<MatrixXr> Dsolver(Td);
+
+        //caso 3)
+        if(regressionData_.isLocationsByNodes() && regressionData_.getCovariates().rows() != 0) {
+            // Setup rhs B
+            MatrixXr B;
+            B = MatrixXr::Zero(nnodes,nlocations);
+            degrees += regressionData_.getCovariates().cols();
+            // B = I(:,k) * Q
+            for (auto i=0; i<nlocations;++i) {
+            	VectorXr ei = VectorXr::Zero(nlocations);
+            	ei(i) = 1;
+            	VectorXr Qi = LeftMultiplybyQ(ei);
+                for (int j=0; j<nlocations; ++j) {
+                    B(k[i], j) = Qi(j);
+                }
+            }
+            // Solve the system TX = B
+            MatrixXr X;
+            X=Dsolver.solve(B);
+            // Compute trace(X(k,:))
+            for (int i = 0; i < k.size(); ++i) {
+                degrees += X(k[i], i);
+            }
+        }
+
+        //if casi 1) e 2)
+        if (!regressionData_.isLocationsByNodes()){
+            MatrixXr X;
+            X = Dsolver.solve(MatrixXr(DMat));
+            //solo in caso 1) con covariate
+            if (regressionData_.getCovariates().rows() != 0) {
+                degrees += regressionData_.getCovariates().cols();
+            }
+            for (int i = 0; i<nnodes; ++i) {
+                degrees += X(i,i);
+            }
+        }
+    }
+    _dof[output_index] = degrees;
+    _var[output_index] = 0;
+    std::cout << "Time required for GCV computation" << std::endl;
+    clock.stop();
+}
+
+template<typename InputHandler, typename Integrator, UInt ORDER>
+void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedomStochastic(UInt output_index, Real lambda)
+{
 	timer clock1;
 	clock1.start();
 	UInt nnodes = mesh_.num_nodes();
 	UInt nlocations = regressionData_.getNumberofObservations();
 
+	std::default_random_engine generator;
+	// Set the initial state of the random number generator
+	if (regressionData_.getRNGstate() != "") {
+		std::stringstream initialRNGstate;
+		initialRNGstate << regressionData_.getRNGstate();
+		initialRNGstate >> generator;
+	}
 	// Creation of the random matrix
-	unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-	std::default_random_engine generator (seed);
 	std::bernoulli_distribution distribution(0.5);
 	UInt nrealizations = regressionData_.getNrealizations();
 	MatrixXr u(nlocations, nrealizations);
@@ -356,6 +532,10 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(U
 			}
 		}
 	}
+	// We have finished using the random number generator: we can save its state
+	std::stringstream finalRNGstate;
+	finalRNGstate << generator;
+	finalRNGstate >> _finalRNGstate;
 
 	// Define the first right hand side : | I  0 |^T * psi^T * Q * u
 	MatrixXr b = MatrixXr::Zero(2*nnodes,u.cols());
@@ -388,7 +568,7 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(U
 	Real std = sqrt(var);
 	std::cout << "edf mean = " << mean << std::endl;
 
-	std::cout << "Time required to compute the GCV" << std::endl;
+	std::cout << "Time required for GCV computation" << std::endl;
 	clock1.stop();
 }
 
