@@ -84,22 +84,21 @@
 //}
 
 template<typename InputHandler, typename Integrator, UInt ORDER>
-void MixedFERegression<InputHandler,Integrator,ORDER>::buildCoeffMatrix(const MatrixXr& DMat,  const SpMat& AMat,  const SpMat& MMat)
+void MixedFERegression<InputHandler,Integrator,ORDER>::buildCoeffMatrix(const SpMat& DMat,  const SpMat& AMat,  const SpMat& MMat)
 {
 	//I reserve the exact memory for the nonzero entries of each row of the coeffmatrix for boosting performance
 	//_coeffmatrix.setFromTriplets(tripletA.begin(),tripletA.end());
 
 	UInt nnodes = mesh_.num_nodes();
 
-	std::vector<coeff> tripletAll;
-	tripletAll.reserve(DMat.rows()*DMat.cols() + 2*AMat.nonZeros() + MMat.nonZeros());
+		std::vector<coeff> tripletAll;
+	tripletAll.reserve(DMat.nonZeros() + 2*AMat.nonZeros() + MMat.nonZeros());
 
-	for (int j=0; j<DMat.cols(); ++j) {
-	  for (int i=0; i<DMat.rows(); ++i)
+	for (int k=0; k<DMat.outerSize(); ++k)
+	  for (SpMat::InnerIterator it(DMat,k); it; ++it)
 	  {
-		  tripletAll.push_back(coeff(i, j, DMat(i, j)));
+		  tripletAll.push_back(coeff(it.row(), it.col(),it.value()));
 	  }
-	}
 	for (int k=0; k<MMat.outerSize(); ++k)
 	  for (SpMat::InnerIterator it(MMat,k); it; ++it)
 	  {
@@ -360,11 +359,13 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedomEx
 	UInt nlocations = regressionData_.getNumberofObservations();
     Real degrees=0;
 
-	MatrixXr DMat = psi_.transpose() * LeftMultiplybyQ(psi_);
     //if caso bello bello
     if (regressionData_.isLocationsByNodes() && regressionData_.getCovariates().rows() == 0 )
     {
-    	buildCoeffMatrix(DMat, AMat_, MMat_);
+    	SpMat DMat = psi_.transpose()*psi_;
+    	SpMat AMat_lambda = (-lambda)*AMat_;
+    	SpMat MMat_lambda = (-lambda)*MMat_;
+    	buildCoeffMatrix(DMat, AMat_lambda, MMat_lambda);
         auto k = regressionData_.getObservationsIndices();
         DMUMPS_STRUC_C id;
         int myid, ierr;
@@ -447,7 +448,7 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedomEx
         free(rhs_sparse);
     }
     else{ //non siamo nel caso 4 => montare i solver   
-
+        MatrixXr DMat = psi_.transpose() * LeftMultiplybyQ(psi_);
         Eigen::SparseLU<SpMat> solver;
         solver.compute(MMat_);
         SpMat U = solver.solve(AMat_);

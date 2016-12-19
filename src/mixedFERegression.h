@@ -58,7 +58,7 @@ class MixedFERegression{
 		void setQ();
 		void setH();
 
-		void buildCoeffMatrix(const MatrixXr& DMat,  const SpMat& AMat,  const SpMat& MMat);
+		void buildCoeffMatrix(const SpMat& DMat,  const SpMat& AMat,  const SpMat& MMat);
 		void buildA(const SpMat& Psi,  const SpMat& AMat,  const SpMat& MMat);
 		MatrixXr LeftMultiplybyQ(const MatrixXr& u);
 
