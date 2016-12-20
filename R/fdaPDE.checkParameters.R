@@ -38,6 +38,15 @@ checkSmoothingParameters<-function(locations = NULL, observations, FEMbasis, lam
   if(!is.logical(CPP_CODE))
     stop("'CPP_CODE' is not logical")
   
+  if (GCVmethod != 1 && GCVmethod != 2)
+    stop("GCVmethod must be either 1(exact calculation) or 2(stochastic estimation)")
+
+  if( !is.numeric(nrealizations) || nrealizations < 1)
+    stop("nrealizations must be a positive integer")
+
+  if ( !is.character(RNGstate))
+    stop("Invalid RNGstate: it needs to be a character previously returned by a smoothing function")
+
   if(!is.null(PDE_parameters_constant))
   {
     if (is.null(PDE_parameters_constant$K)) 

@@ -27,24 +27,17 @@ class MixedFERegression{
 		const InputHandler& regressionData_;
 		std::vector<coeff> tripletsData_;
 
-		//SpMat NWblock_;
+		
 		SpMat psi_;
-		SpMat DMat_;
 		SpMat AMat_;
 		SpMat MMat_;
-		SpMat A_;		// _coeffmatrix with psi^T*psi in north-west block
+		SpMat A_;		// system matrix with psi^T*psi in north-west block
 		MatrixXr U_;	// psi^T*W padded with zeros
 		
 		
 		std::unique_ptr<LinearSolvers::SpLinearSolver> Adec_;
 		Eigen::PartialPivLU<MatrixXr> Gdec_;
 		
-
-		MatrixXr Q_;
-		MatrixXr H_;
-
-		SpMat _coeffmatrix;
-		SpMat _coeffmatrix2;
 		VectorXr _b;                     //!A Eigen::VectorXr: Stores the system right hand side.
 		std::vector<VectorXr> _solution; //!A Eigen::VectorXr : Stores the system solution
 		std::vector<Real> _dof;
@@ -55,10 +48,6 @@ class MixedFERegression{
 		bool isWTWfactorized_;
 
 		void setPsi();
-		void setQ();
-		void setH();
-
-		void buildCoeffMatrix(const SpMat& DMat,  const SpMat& AMat,  const SpMat& MMat);
 		void buildA(const SpMat& Psi,  const SpMat& AMat,  const SpMat& MMat);
 		MatrixXr LeftMultiplybyQ(const MatrixXr& u);
 
@@ -78,24 +67,6 @@ class MixedFERegression{
 		//!A Destructor
 		//~Model(){};
 		
-		 //! A normal member taking six arguments. Build the linear system.
-		 /*!
-		 * This member builds the system matrix and system right hand side, storing them in _coeffmatr and _b
-		\param L is a const reference Eigen::SparseMatrix<> : NW block of the system matrix .
-		\param opMat is a const reference Eigen::SparseMatrix<> : NE block of the system matrix .
-		\param opMat2 is a const reference Eigen::SparseMatrix<> : SW block of the system matrix .
-		\param mass is a const reference Eigen::SparseMatrix<> : SE block of the system matrix .
-		\the method modifies _coeffmatrix and _b.
-		*/
-//		void build( SpMat& L,  SpMat& opMat,  SpMat& opMat2,  SpMat& mass,
-//						  const VectorXr& rightside, const VectorXr& forcing_term );
-
-		//
-		//		|DMat | AMat^T  |
-		//		|AMat | MMat	|
-
-
-
 		void smoothLaplace();
 		void smoothEllipticPDE();
 		void smoothEllipticPDESpaceVarying();
@@ -128,9 +99,7 @@ class MixedFERegression{
 		\param bcvalues is a const reference to vector<double> : the values of the boundary conditions relative to bcindex.
 		\the method modifies _coeffmatrix and _b
 		*/		
-		void addDirichletBC(const vector<int>& bcindex, const vector<Real>& bcvalues);
-		void getDataMatrix(SpMat& DMat);
-		void getDataMatrixByIndices(SpMat& DMat);
+		void addDirichletBC();
 		void getRightHandData(VectorXr& rightHandData);
 		void computeDegreesOfFreedom(UInt output_index, Real lambda);
 		void computeDegreesOfFreedomExact(UInt output_index, Real lambda);

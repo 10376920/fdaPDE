@@ -90,11 +90,13 @@ SEXP regression_Laplace(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Ro
 		const std::vector<VectorXr>& solution = regression.getSolution();
 		const std::vector<Real>& dof = regression.getDOF();
 		const std::vector<Real>& var = regression.getVar();
+
 		//Copy result in R memory
-		result = PROTECT(Rf_allocVector(VECSXP, 3));
+		result = PROTECT(Rf_allocVector(VECSXP, 4));
 		SET_VECTOR_ELT(result, 0, Rf_allocMatrix(REALSXP, solution[0].size(), solution.size()));
 		SET_VECTOR_ELT(result, 1, Rf_allocVector(REALSXP, solution.size()));
 		SET_VECTOR_ELT(result, 2, Rf_allocVector(REALSXP, solution.size()));
+		SET_VECTOR_ELT(result, 3, Rf_allocVector(STRSXP, 1));
 
 		Real *rans = REAL(VECTOR_ELT(result, 0));
 		for(UInt j = 0; j < solution.size(); j++)
@@ -114,8 +116,12 @@ SEXP regression_Laplace(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Ro
 		{
 			rans3[i] = var[i];
 		}
-		
+
+		std::string RNGstate = regression.getFinalRNGstate();
+		SET_STRING_ELT(VECTOR_ELT(result, 3), 0, Rf_mkChar(RNGstate.c_str()));
+
 		UNPROTECT(1);
+
     }
 
 	return(result);
@@ -138,12 +144,16 @@ SEXP regression_PDE(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Rorder
 
 		regression.smoothEllipticPDE();
 
-		const std::vector<VectorXr>& solution = regression.getSolution();
+	    const std::vector<VectorXr>& solution = regression.getSolution();
 		const std::vector<Real>& dof = regression.getDOF();
+		const std::vector<Real>& var = regression.getVar();
+
 		//Copy result in R memory
-		result = PROTECT(Rf_allocVector(VECSXP, 2));
+		result = PROTECT(Rf_allocVector(VECSXP, 4));
 		SET_VECTOR_ELT(result, 0, Rf_allocMatrix(REALSXP, solution[0].size(), solution.size()));
 		SET_VECTOR_ELT(result, 1, Rf_allocVector(REALSXP, solution.size()));
+		SET_VECTOR_ELT(result, 2, Rf_allocVector(REALSXP, solution.size()));
+		SET_VECTOR_ELT(result, 3, Rf_allocVector(STRSXP, 1));
 
 		Real *rans = REAL(VECTOR_ELT(result, 0));
 		for(UInt j = 0; j < solution.size(); j++)
@@ -157,9 +167,17 @@ SEXP regression_PDE(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Rorder
 		{
 			rans2[i] = dof[i];
 		}
+
+		Real *rans3 = REAL(VECTOR_ELT(result, 2));
+		for(UInt i = 0; i < solution.size(); i++)
+		{
+			rans3[i] = var[i];
+		}
+
+		std::string RNGstate = regression.getFinalRNGstate();
+		SET_STRING_ELT(VECTOR_ELT(result, 3), 0, Rf_mkChar(RNGstate.c_str()));
+
 		UNPROTECT(1);
-
-
     }
 	else if(regressionData.getOrder()==2)
 	{
@@ -169,12 +187,16 @@ SEXP regression_PDE(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Rorder
 
 		regression.smoothEllipticPDE();
 
-		const std::vector<VectorXr>& solution = regression.getSolution();
+	    const std::vector<VectorXr>& solution = regression.getSolution();
 		const std::vector<Real>& dof = regression.getDOF();
+		const std::vector<Real>& var = regression.getVar();
+
 		//Copy result in R memory
-		result = PROTECT(Rf_allocVector(VECSXP, 2));
+		result = PROTECT(Rf_allocVector(VECSXP, 4));
 		SET_VECTOR_ELT(result, 0, Rf_allocMatrix(REALSXP, solution[0].size(), solution.size()));
 		SET_VECTOR_ELT(result, 1, Rf_allocVector(REALSXP, solution.size()));
+		SET_VECTOR_ELT(result, 2, Rf_allocVector(REALSXP, solution.size()));
+		SET_VECTOR_ELT(result, 3, Rf_allocVector(STRSXP, 1));
 
 		Real *rans = REAL(VECTOR_ELT(result, 0));
 		for(UInt j = 0; j < solution.size(); j++)
@@ -188,6 +210,16 @@ SEXP regression_PDE(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Rorder
 		{
 			rans2[i] = dof[i];
 		}
+
+		Real *rans3 = REAL(VECTOR_ELT(result, 2));
+		for(UInt i = 0; i < solution.size(); i++)
+		{
+			rans3[i] = var[i];
+		}
+
+		std::string RNGstate = regression.getFinalRNGstate();
+		SET_STRING_ELT(VECTOR_ELT(result, 3), 0, Rf_mkChar(RNGstate.c_str()));
+
 		UNPROTECT(1);
     }
 
@@ -213,14 +245,18 @@ SEXP regression_PDE_space_varying(SEXP Rlocations, SEXP Robservations, SEXP Rmes
 		//std::cout<< "Mesh loaded"<<std::endl;
 		MixedFERegression<RegressionDataEllipticSpaceVarying, IntegratorTriangleP2,1> regression(mesh,regressionData);
 
-		regression.smoothEllipticPDESpaceVarying();
+	    regression.smoothEllipticPDESpaceVarying();
 
-		const std::vector<VectorXr>& solution = regression.getSolution();
+	    const std::vector<VectorXr>& solution = regression.getSolution();
 		const std::vector<Real>& dof = regression.getDOF();
+		const std::vector<Real>& var = regression.getVar();
+
 		//Copy result in R memory
-		result = PROTECT(Rf_allocVector(VECSXP, 2));
+		result = PROTECT(Rf_allocVector(VECSXP, 4));
 		SET_VECTOR_ELT(result, 0, Rf_allocMatrix(REALSXP, solution[0].size(), solution.size()));
 		SET_VECTOR_ELT(result, 1, Rf_allocVector(REALSXP, solution.size()));
+		SET_VECTOR_ELT(result, 2, Rf_allocVector(REALSXP, solution.size()));
+		SET_VECTOR_ELT(result, 3, Rf_allocVector(STRSXP, 1));
 
 		Real *rans = REAL(VECTOR_ELT(result, 0));
 		for(UInt j = 0; j < solution.size(); j++)
@@ -234,6 +270,16 @@ SEXP regression_PDE_space_varying(SEXP Rlocations, SEXP Robservations, SEXP Rmes
 		{
 			rans2[i] = dof[i];
 		}
+
+		Real *rans3 = REAL(VECTOR_ELT(result, 2));
+		for(UInt i = 0; i < solution.size(); i++)
+		{
+			rans3[i] = var[i];
+		}
+
+		std::string RNGstate = regression.getFinalRNGstate();
+		SET_STRING_ELT(VECTOR_ELT(result, 3), 0, Rf_mkChar(RNGstate.c_str()));
+
 		UNPROTECT(1);
 
     }
@@ -243,14 +289,18 @@ SEXP regression_PDE_space_varying(SEXP Rlocations, SEXP Robservations, SEXP Rmes
 		//std::cout<< "Mesh loaded"<<std::endl;
 		MixedFERegression<RegressionDataEllipticSpaceVarying, IntegratorTriangleP4,2> regression(mesh,regressionData);
 
-		regression.smoothEllipticPDESpaceVarying();
+	    regression.smoothEllipticPDESpaceVarying();
 
-		const std::vector<VectorXr>& solution = regression.getSolution();
+	    const std::vector<VectorXr>& solution = regression.getSolution();
 		const std::vector<Real>& dof = regression.getDOF();
+		const std::vector<Real>& var = regression.getVar();
+
 		//Copy result in R memory
-		result = PROTECT(Rf_allocVector(VECSXP, 2));
+		result = PROTECT(Rf_allocVector(VECSXP, 4));
 		SET_VECTOR_ELT(result, 0, Rf_allocMatrix(REALSXP, solution[0].size(), solution.size()));
 		SET_VECTOR_ELT(result, 1, Rf_allocVector(REALSXP, solution.size()));
+		SET_VECTOR_ELT(result, 2, Rf_allocVector(REALSXP, solution.size()));
+		SET_VECTOR_ELT(result, 3, Rf_allocVector(STRSXP, 1));
 
 		Real *rans = REAL(VECTOR_ELT(result, 0));
 		for(UInt j = 0; j < solution.size(); j++)
@@ -264,6 +314,16 @@ SEXP regression_PDE_space_varying(SEXP Rlocations, SEXP Robservations, SEXP Rmes
 		{
 			rans2[i] = dof[i];
 		}
+
+		Real *rans3 = REAL(VECTOR_ELT(result, 2));
+		for(UInt i = 0; i < solution.size(); i++)
+		{
+			rans3[i] = var[i];
+		}
+
+		std::string RNGstate = regression.getFinalRNGstate();
+		SET_STRING_ELT(VECTOR_ELT(result, 3), 0, Rf_mkChar(RNGstate.c_str()));
+
 		UNPROTECT(1);
     }
 

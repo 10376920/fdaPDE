@@ -1,11 +1,5 @@
-include Makefile.inc
 # Completare la variabile MUMPS PAHT con il percorso di mumps (CON I)
 # #da completare per utente
 MUMPS_I = -I/u/geo2/sw/Toolchains/gcc+system/4.8/Packages/libs/mumps-mpi/4.10/include
 MUMPS_L = -L/u/geo2/sw/Toolchains/gcc+system/4.8/Packages/libs/mumps-mpi/4.10/lib -L/u/geo2/sw/Toolchains/gcc+system/4.8/Packages/libs/scotch-mpi/5.1/lib
 MUMPS_l =  -ldmumps -lptscotcherr
-###
-PKG_CPPFLAGS = -I./LinearSolvers/ -I./LinearSolvers/MumpsSparse/ -I./LinearSolvers/EigenSparseLU -I../Eigen -DCHILD_PATH='"${R_PACKAGE_DIR}/bin/child"' $(MUMPS_I)
-PKG_CXXFLAGS = -std=c++11
-PKG_CFLAGS = -std=c99
-PKG_LIBS = $(MUMPS_L) $(MUMPS_l)

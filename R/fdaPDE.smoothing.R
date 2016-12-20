@@ -64,7 +64,7 @@ smooth.FEM.basis<-function(locations = NULL, observations, FEMbasis, lambda, cov
 {
  
   ##################### Checking parameters, sizes and conversion ################################
-  checkSmoothingParameters(locations, observations, FEMbasis, lambda, covariates, BC, GCV, CPP_CODE, PDE_parameters_constant = NULL, PDE_parameters_func = NULL)
+  checkSmoothingParameters(locations, observations, FEMbasis, lambda, covariates, BC, GCV, CPP_CODE, GCVmethod , nrealizations, RNGstate, PDE_parameters_constant = NULL, PDE_parameters_func = NULL)
   
   ## Coverting to format for internal usage
   if(!is.null(locations))
@@ -184,7 +184,7 @@ smooth.FEM.basis<-function(locations = NULL, observations, FEMbasis, lambda, cov
 smooth.FEM.PDE.basis<-function(locations = NULL, observations, FEMbasis, lambda, PDE_parameters, covariates = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE, GCVmethod = 2, nrealizations = 100, RNGstate = "")
 {
   ##################### Checking parameters, sizes and conversion ################################
-  checkSmoothingParameters(locations, observations, FEMbasis, lambda, covariates, BC, GCV, CPP_CODE, PDE_parameters_constant = PDE_parameters, PDE_parameters_func = NULL)
+  checkSmoothingParameters(locations, observations, FEMbasis, lambda, covariates, BC, GCV, CPP_CODE,GCVmethod , nrealizations, RNGstate,  PDE_parameters_constant = PDE_parameters, PDE_parameters_func = NULL)
   
   ## Coverting to format for internal usage
   if(!is.null(locations))
@@ -333,7 +333,7 @@ smooth.FEM.PDE.basis<-function(locations = NULL, observations, FEMbasis, lambda,
 smooth.FEM.PDE.sv.basis<-function(locations = NULL, observations, FEMbasis, lambda, PDE_parameters, covariates = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE, GCVmethod = 2, nrealizations = 100, RNGstate = "")
 {
   ##################### Checking parameters, sizes and conversion ################################
-  checkSmoothingParameters(locations, observations, FEMbasis, lambda, covariates, BC, GCV, CPP_CODE, PDE_parameters_constant = NULL, PDE_parameters_func = PDE_parameters)
+  checkSmoothingParameters(locations, observations, FEMbasis, lambda, covariates, BC, GCV, CPP_CODE, GCVmethod , nrealizations, RNGstate,  PDE_parameters_constant = NULL, PDE_parameters_func = PDE_parameters)
   
   ## Coverting to format for internal usage
   if(!is.null(locations))

@@ -116,6 +116,7 @@ CPP_smooth.FEM.PDE.basis<-function(locations, observations, FEMbasis, lambda, PD
   storage.mode(lambda)<- "double"
   storage.mode(BC$BC_indices)<- "integer"
   storage.mode(BC$BC_values)<-"double"
+  #
   storage.mode(GCV)<-"integer"
   storage.mode(nrealizations) = "integer"
   storage.mode(RNGstate) = "character"
