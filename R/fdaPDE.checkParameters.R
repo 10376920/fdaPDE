@@ -1,4 +1,19 @@
-checkSmoothingParameters<-function(locations = NULL, observations, FEMbasis, lambda, covariates = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE, GCVmethod = 2, nrealizations = 100, RNGstate = "", PDE_parameters_constant = NULL, PDE_parameters_func = NULL)
+checkSmoothingParameters<-function(
+	locations = NULL,
+	observations,
+	FEMbasis,
+	lambda,
+	covariates = NULL,
+	BC = NULL,
+	GCV = FALSE,
+	CPP_CODE = TRUE,
+	GCVmethod = 2,
+	nrealizations = 100,
+	RNGstate = "",
+	solver = "EigenLU",
+	nprocessors = 1,
+	PDE_parameters_constant = NULL,
+	PDE_parameters_func = NULL)
 {
   #################### Parameter Check #########################
   if(!is.null(locations))
@@ -46,6 +61,12 @@ checkSmoothingParameters<-function(locations = NULL, observations, FEMbasis, lam
 
   if ( !is.character(RNGstate))
     stop("Invalid RNGstate: it needs to be a character previously returned by a smoothing function")
+  
+  if (solver != "MumpsSparse" && solver != "EigenSparseLU")
+    stop("Solver must be either \"MumpsSparse\" or \"EigenSparseLU\"")
+
+  if (!is.numeric(nprocessors) || nprocessors < 1)
+    stop("nprocessors must be a positive integer")
 
   if(!is.null(PDE_parameters_constant))
   {
@@ -78,7 +99,17 @@ checkSmoothingParameters<-function(locations = NULL, observations, FEMbasis, lam
   }
 }
 
-checkSmoothingParametersSize<-function(locations = NULL, observations, FEMbasis, lambda, covariates = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE, PDE_parameters_constant = NULL, PDE_parameters_func = NULL)
+checkSmoothingParametersSize<-function(
+	locations = NULL,
+	observations,
+	FEMbasis,
+	lambda,
+	covariates = NULL,
+	BC = NULL,
+	GCV = FALSE,
+	CPP_CODE = TRUE,
+	PDE_parameters_constant = NULL,
+	PDE_parameters_func = NULL)
 {
   #################### Parameter Check #########################
   if(ncol(observations) != 1)

@@ -621,15 +621,6 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::system_factorize() {
 
 	// First phase: Factorization of matrix A
 	std::cout << "Factorization of A" << std::endl;
-	
-	// Definition of a list of parameters for the solver
-	/*LinearSolvers::ParameterList list;
-	list.set("icntl[14]",100);
-	list.set("sym",2);
-	list.set("par",1);
-	list.set("nproc",2);
-	Adec_->setParameters(list);
-	std::cout << "Parameters set" << std::endl;*/
 
 	// Invoke the factorization on matrix A
 	Adec_->factorize(A_);

@@ -58,10 +58,18 @@ class MixedFERegression{
 			regressionData_(regressionData),
 			isWTWfactorized_(false)
 		{
-			LSProxy<LinearSolvers::EigenSparseLU> dummy1("EigenSparseLU");
-			LSProxy<LinearSolvers::MumpsSparse> dummy2("MumpsSparse");
+			std::string solver_name = regressionData_.getSolver();
+			LSProxy<LinearSolvers::EigenSparseLU> dummy1(solver_name);
 			LSFactory & LSfactory=LSFactory::Instance();
-			Adec_ = LSfactory.create("EigenSparseLU"); //TODO get name from input
+			Adec_ = LSfactory.create(solver_name); 
+			// Definition of a list of parameters for the solver
+			LinearSolvers::ParameterList list;
+			if(solver_name == "MumpsSparse") {
+				list.set("icntl[14]", 200);
+				list.set("sym", 2);
+				list.set("nproc", regressionData_.getnprocessors());
+			}
+			Adec_->setParameters(list);
 		};
 		
 		//!A Destructor

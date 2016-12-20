@@ -29,7 +29,7 @@ RegressionDataEllipticSpaceVarying::RegressionDataEllipticSpaceVarying(std::vect
 
 #ifdef R_VERSION_
 RegressionData::RegressionData(SEXP Rlocations, SEXP Robservations, SEXP Rorder, SEXP Rlambda, SEXP Rcovariates,
-			   SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations, SEXP RRNGstate)
+			   SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations, SEXP RRNGstate, SEXP Rsolver, SEXP Rnprocessors)
 {
 	setLocations(Rlocations);
 	//std::cout<< "Locations set"<<std::endl;
@@ -56,9 +56,9 @@ RegressionData::RegressionData(SEXP Rlocations, SEXP Robservations, SEXP Rorder,
 }
 
 RegressionDataElliptic::RegressionDataElliptic(SEXP Rlocations, SEXP Robservations, SEXP Rorder, SEXP Rlambda, SEXP RK, SEXP Rbeta,
-				 SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations, SEXP RRNGstate):
+				 SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations, SEXP RRNGstate, SEXP Rsolver, SEXP Rnprocessors):
 	RegressionData(Rlocations, Robservations, Rorder, Rlambda, Rcovariates,
-					 			   RBCIndices, RBCValues, DOF, RGCVmethod, Rnrealizations, RRNGstate)
+					 			   RBCIndices, RBCValues, DOF, RGCVmethod, Rnrealizations, RRNGstate, Rsolver, Rnprocessors)
 {
 	K_.resize(2, 2);
 	for(auto i=0; i<2; ++i)
@@ -79,8 +79,8 @@ RegressionDataElliptic::RegressionDataElliptic(SEXP Rlocations, SEXP Robservatio
 }
 
 RegressionDataEllipticSpaceVarying::RegressionDataEllipticSpaceVarying(SEXP Rlocations, SEXP Robservations, SEXP Rorder, SEXP Rlambda, SEXP RK, SEXP Rbeta,
-				 SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations, SEXP RRNGstate):
-					 RegressionData(Rlocations, Robservations, Rorder, Rlambda, Rcovariates, RBCIndices, RBCValues, DOF, RGCVmethod, Rnrealizations, RRNGstate),
+				 SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations, SEXP RRNGstate, SEXP Rsolver, SEXP Rnprocessors):
+					 RegressionData(Rlocations, Robservations, Rorder, Rlambda, Rcovariates, RBCIndices, RBCValues, DOF, RGCVmethod, Rnrealizations, RRNGstate, Rsolver, Rnprocessors),
 					 K_(RK), beta_(Rbeta), c_(Rc), u_(Ru)
 {;}
 
@@ -101,6 +101,14 @@ void RegressionData::setRNGstate(SEXP RRNGstate) {
 void RegressionData::setNrealizations(SEXP Rnrealizations) {
 	nrealizations_ = INTEGER(Rnrealizations)[0];
 }
+
+void RegressionData::setnprocessors(SEXP Rnprocessors) {
+	nprocessors_ = INTEGER(Rnprocessors)[0];
+}
+void RegressionData::setSolver(SEXP Rsolver) {
+	solver_.assign(CHAR(STRING_ELT(Rsolver, 0)));
+}
+
 
 void RegressionData::setObservations(SEXP Robservations)
 {
