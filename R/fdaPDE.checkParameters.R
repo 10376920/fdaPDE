@@ -1,4 +1,4 @@
-checkSmoothingParameters<-function(locations = NULL, observations, FEMbasis, lambda, covariates = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE, PDE_parameters_constant = NULL, PDE_parameters_func = NULL)
+checkSmoothingParameters<-function(locations = NULL, observations, FEMbasis, lambda, covariates = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE, GCVmethod = 2, nrealizations = 100, RNGstate = "", PDE_parameters_constant = NULL, PDE_parameters_func = NULL)
 {
   #################### Parameter Check #########################
   if(!is.null(locations))
