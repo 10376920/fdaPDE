@@ -307,6 +307,7 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedomSt
 	std::default_random_engine generator;
 	// Set the initial state of the random number generator
 	if (regressionData_.getRNGstate() != "") {
+	  std::cout << "SETTING RNG STATE: " << std::endl;
 		std::stringstream initialRNGstate;
 		initialRNGstate << regressionData_.getRNGstate();
 		initialRNGstate >> generator;

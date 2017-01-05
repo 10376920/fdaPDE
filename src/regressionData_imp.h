@@ -38,6 +38,10 @@ RegressionData::RegressionData(SEXP Rlocations, SEXP Robservations, SEXP Rorder,
 	setCovariates(Rcovariates);
 	//std::cout<< "Covariates set"<<std::endl;
 	setNrealizations(Rnrealizations);
+	
+	setSolver(Rsolver);
+	setnprocessors(Rnprocessors);
+	setRNGstate(RRNGstate);
 
 	GCVmethod_ = INTEGER(RGCVmethod)[0];
 
