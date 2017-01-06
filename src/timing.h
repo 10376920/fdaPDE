@@ -1,6 +1,9 @@
 #include <iostream>
 #include <iomanip>
 #include <ctime>
+#include <R.h>
+#include <Rdefines.h>
+#include <Rinternals.h> 
 
 class timer {
 public:
@@ -13,9 +16,10 @@ public:
     clock_gettime(CLOCK_REALTIME, &end);
     
     timespec difference = diff(begin, end);
-    std::cout << "It took " << difference.tv_sec << "."
-              << std::setfill('0') << std::setw(9) << difference.tv_nsec
-              << "s" << std::endl;
+    Rprintf("It took %u.%09us\n", difference.tv_sec, difference.tv_nsec);
+//    std::cout << "It took " << difference.tv_sec << "."
+//              << std::setfill('0') << std::setw(9) << difference.tv_nsec
+//              << "s" << std::endl;
   }
 private:
   timespec diff(timespec start, timespec end)
