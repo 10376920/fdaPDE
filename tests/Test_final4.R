@@ -1,4 +1,5 @@
 rm(list= ls())
+sink("output.txt")
 library(Rmpi)
 library(fdaPDE2)
 
@@ -7,9 +8,9 @@ source("../tests/mesh.R")
 # Edit here
 
 # A vector containing the Ns of the grids to be used
-N = c(20)
+N = c(20,30,40,50,60,70,80,90)
 # The number of observations to be generated (same length as N)
-n_observations = c(20)
+n_observations = c(20,30,40,50,60,70,80,90)
 # The "true" coefficients of the covariates
 beta = rbind(0.2, -0.4, 0.7, -0.05)
 # Functions to be used to generate the covariates
@@ -26,7 +27,7 @@ lambda = c(1)
 # The order of FEM
 order = 1
 # Numbers of realizations
-nreal = seq(100,1000,100) 
+nreal = 1000
 ################################################################################
 
 n_meshes = length(N)
@@ -70,53 +71,39 @@ for (i in 1:n_meshes) {
     indeces_to_cut= sample(1:length(observations_on_nodes[[i]]), N[i] - n_observations[i], replace=F)
     observations_on_nodes[[i]][indeces_to_cut[]]=NaN
 }
-var_vector = vector("list", length(nreal) )
-var_vector_n = vector("integer", 100 )
 
-
-######### COVARIATES, LOC NOT ON NODES 
+# COVARIATES, LOC NOT ON NODES 
 #brutto brutto
-
-cat("\nCOVARIATES, LOC NOT ON NODES\n\n")
-for ( j in 1:length(nreal))
-{
-	output_CPP_stochastic1 = smooth.FEM.basis(  
-	                                observations = observations[[i]],
-	                                locations=locations[[i]],
-	                                FEMbasis = FEMbasis[[i]],
-	                                lambda = lambda,
-	                                covariates=covariates[[i]],
-	                                GCV = TRUE,
-	                                CPP_CODE = TRUE,
-	                                GCVmethod=2,
-	                                nrealizations = nreal[j] ,
-	                                RNGstate = "")
-	RNG_state =  output_CPP_stochastic1$RNGstate
-	for ( k in 1:100){
-		output_CPP_stochastic1 = smooth.FEM.basis(  
-                                observations = observations[[i]],
-                                locations=locations[[i]],
-                                FEMbasis = FEMbasis[[i]],
-                                lambda = lambda,
-                                covariates=covariates[[i]],
-                                GCV = TRUE,
-                                CPP_CODE = TRUE,
-                                GCVmethod=2,
-                                nrealizations = nreal[j],
-                                RNGstate = RNG_state )
-		var_vector_n[k] = output_CPP_stochastic1$var
-		RNG_state =  output_CPP_stochastic1$RNGstate
-	}
-	var_vector[j]=var(var_vector_n)
+if (1) {
+    cat("\nCOVARIATES, LOC NOT ON NODES\n\n")
+    for (i in 1:n_meshes) {
+        cat("----------------------------------------------------------------   ")
+        cat("grid: ", N[i], "x", N[i], "nodes\n")
+        cat("Exact computation \n")
+        output_CPP_exact =
+        smooth.FEM.basis(observations = observations[[i]],
+                         locations=locations[[i]],
+                         FEMbasis = FEMbasis[[i]],
+                         lambda = lambda,
+                         covariates=covariates[[i]],
+                         GCV = TRUE,
+                         CPP_CODE = TRUE,
+                         GCVmethod = 1)
+        cat("edf = ", output_CPP_exact$edf)
+        cat ("\n")
+        cat("Stochastic computation \n")
+        output_CPP_stochastic =
+        smooth.FEM.basis(observations = observations[[i]],
+                         locations=locations[[i]],
+                         FEMbasis = FEMbasis[[i]],
+                         lambda = lambda,
+                         covariates=covariates[[i]],
+                         GCV = TRUE,
+                         CPP_CODE = TRUE,
+                         nrealizations = nreal,
+                         GCVmethod = 2)
+        cat("edf = ", output_CPP_stochastic$edf)
+        cat ("\n")
+    }
 }
-logvar <-NULL
-for (i in 1:length(var_vector))
-	logvar=c(logvar,log(var_vector[[i]]))
-
-pdf("2_test1")
-plot(nreal, var_vector ,type="s",col="blue",ylab="var") 
-dev.off()
-
-pdf("prova")
-plot(log(nreal), logvar ,type="s",col="blue",ylab="log(var)") 
-dev.off()
+sink()

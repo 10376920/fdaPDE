@@ -95,7 +95,7 @@ smooth.FEM.basis<-function(locations = NULL, observations, FEMbasis, lambda, cov
     bigsol = R_smooth.FEM.basis(locations, observations, FEMbasis, lambda, covariates, GCV)   
   }else
   {
-    print('C++ Code Execution')
+    #print('C++ Code Execution')
     bigsol = CPP_smooth.FEM.basis(locations, observations, FEMbasis, lambda, covariates, BC, GCV, GCVmethod, nrealizations, RNGstate, solver, nprocessors)
   }
   
