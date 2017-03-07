@@ -69,6 +69,7 @@ class MixedFERegression{
 				list.set("icntl[14]", 200);
 				list.set("sym", 2);
 				list.set("nproc", regressionData_.getnprocessors());
+				list.set("hosts", regressionData_.getHosts());
 			}
 			Adec_->setParameters(list);
 		};

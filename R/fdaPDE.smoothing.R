@@ -60,7 +60,7 @@
 #' print(ZincMeuseCovar$beta)
 
 
-smooth.FEM.basis<-function(locations = NULL, observations, FEMbasis, lambda, covariates = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE, GCVmethod = 2, nrealizations = 100, RNGstate = "", solver = "EigenSparseLU", nprocessors = 1)
+smooth.FEM.basis<-function(locations = NULL, observations, FEMbasis, lambda, covariates = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE, GCVmethod = 2, nrealizations = 100, RNGstate = "", solver = "EigenSparseLU", nprocessors = 1, hosts = "")
 {
  
   ##################### Checking parameters, sizes and conversion ################################
@@ -181,7 +181,7 @@ smooth.FEM.basis<-function(locations = NULL, observations, FEMbasis, lambda, cov
 #' 
 #' # Evaluate solution in three points
 #' eval.FEM(FEM_CPP_PDE$fit.FEM, locations = rbind(c(0,0),c(0.5,0),c(-2,-2)))
-smooth.FEM.PDE.basis<-function(locations = NULL, observations, FEMbasis, lambda, PDE_parameters, covariates = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE, GCVmethod = 2, nrealizations = 100, RNGstate = "", solver = "EigenSparseLU", nprocessors = 1)
+smooth.FEM.PDE.basis<-function(locations = NULL, observations, FEMbasis, lambda, PDE_parameters, covariates = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE, GCVmethod = 2, nrealizations = 100, RNGstate = "", solver = "EigenSparseLU", nprocessors = 1, hosts = "")
 {
   ##################### Checking parameters, sizes and conversion ################################
   checkSmoothingParameters(locations, observations, FEMbasis, lambda, covariates, BC, GCV, CPP_CODE,GCVmethod , nrealizations, RNGstate, solver, nprocessors, PDE_parameters_constant = PDE_parameters, PDE_parameters_func = NULL)
@@ -330,7 +330,7 @@ smooth.FEM.PDE.basis<-function(locations = NULL, observations, FEMbasis, lambda,
 #' FEM_CPP_PDE = smooth.FEM.PDE.sv.basis(observations = observations, 
 #'              FEMbasis = FEMbasis, lambda = lambda, PDE_parameters = PDE_parameters)
 #' plot(FEM_CPP_PDE$fit.FEM)
-smooth.FEM.PDE.sv.basis<-function(locations = NULL, observations, FEMbasis, lambda, PDE_parameters, covariates = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE, GCVmethod = 2, nrealizations = 100, RNGstate = "", solver = "EigenSparseLU", nprocessors = 1)
+smooth.FEM.PDE.sv.basis<-function(locations = NULL, observations, FEMbasis, lambda, PDE_parameters, covariates = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE, GCVmethod = 2, nrealizations = 100, RNGstate = "", solver = "EigenSparseLU", nprocessors = 1, hosts = "")
 {
   ##################### Checking parameters, sizes and conversion ################################
   checkSmoothingParameters(locations, observations, FEMbasis, lambda, covariates, BC, GCV, CPP_CODE, GCVmethod , nrealizations, RNGstate, solver, nprocessors, PDE_parameters_constant = NULL, PDE_parameters_func = PDE_parameters)

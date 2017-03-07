@@ -36,6 +36,7 @@ class  RegressionData{
 		std::string RNGstate_;    // State at which the random number generator should be set
 		std::string solver_;
 		UInt nprocessors_;
+		std::string hosts_;
 		
 		std::vector<Real> bc_values_;
 		std::vector<UInt> bc_indices_;
@@ -51,6 +52,7 @@ class  RegressionData{
 		void setRNGstate(SEXP RRNGstate);
 		void setnprocessors(SEXP Rnprocessors);
 		void setSolver(SEXP Rsolver);
+		void setHosts(SEXP Rhosts);
 		#endif
 
 	public:
@@ -87,7 +89,7 @@ class  RegressionData{
 
 		#ifdef R_VERSION_
 		explicit RegressionData(SEXP Rlocations, SEXP Robservations, SEXP Rorder, SEXP Rlambda, SEXP Rcovariates,
-				   SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations, SEXP RRNGstate, SEXP Rsolver, SEXP Rnprocessors);
+				   SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations, SEXP RRNGstate, SEXP Rsolver, SEXP Rnprocessors, SEXP Rhosts);
 		#endif
 
 		explicit RegressionData(std::vector<Point>& locations, VectorXr& observations, UInt order, std::vector<Real> lambda, MatrixXr& covariates , std::vector<UInt>& bc_indices, std::vector<Real>& bc_values, bool DOF);
@@ -128,6 +130,8 @@ class  RegressionData{
 		inline std::string const & getSolver() const {return solver_;}
 		//! A method returning the number of processors used by MUMPS
 		inline UInt const & getnprocessors() const {return nprocessors_;}
+		//! A method returning the hostfile name where processes should be spawned
+		inline std::string const & getHosts() const {return hosts_;}
 };
 
 
@@ -141,7 +145,7 @@ class  RegressionDataElliptic:public RegressionData
 	public:
 		#ifdef R_VERSION_
 		explicit RegressionDataElliptic(SEXP Rlocations, SEXP Robservations, SEXP Rorder, SEXP Rlambda, SEXP RK, SEXP Rbeta,
-				 SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations, SEXP RRNGstate, SEXP Rsolver, SEXP Rnprocessors);
+				 SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations, SEXP RRNGstate, SEXP Rsolver, SEXP Rnprocessors, SEXP Rhosts);
 		#endif
 
 		explicit RegressionDataElliptic(std::vector<Point>& locations, VectorXr& observations, UInt order, std::vector<Real> lambda, Eigen::Matrix<Real,2,2>& K,	Eigen::Matrix<Real,2,1>& beta,
@@ -163,7 +167,7 @@ class RegressionDataEllipticSpaceVarying:public RegressionData
 	public:
 		#ifdef R_VERSION_
 		explicit RegressionDataEllipticSpaceVarying(SEXP Rlocations, SEXP Robservations, SEXP Rorder, SEXP Rlambda, SEXP RK, SEXP Rbeta,
-				 SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations, SEXP RRNGstate, SEXP Rsolver, SEXP Rnprocessors);
+				 SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations, SEXP RRNGstate, SEXP Rsolver, SEXP Rnprocessors, SEXP Rhosts);
 		#endif
 
 

@@ -104,10 +104,16 @@ void MumpsSparse::setParameters(const ParameterList &list) {
 		dmumps_c(&_id);
 		int par = list.getValue<int>("par", 1);
 		_nproc  = list.getValue<int>("nproc", 1);
-	
+		std::string hosts = list.getValue<std::string>("hosts", "");
+		MPI_Info info;
+		MPI_Info_create (&info);
+		if(hosts != "") {
+			const char* hosts_cstr = hosts.c_str();
+			MPI_Info_set (info, "hostfile", const_cast<char*>(hosts_cstr));
+		}
 		if (_nproc > 1) {
 			_parallel_flag = true;
-			MPI_Comm_spawn(CHILD_PATH, NULL, _nproc - par, MPI_INFO_NULL, 0, MPI_COMM_WORLD, &_children, err);
+			MPI_Comm_spawn(CHILD_PATH, NULL, _nproc - par, info, 0, MPI_COMM_WORLD, &_children, err);
 			MPI_Comm intracomm;
 			MPI_Intercomm_merge(_children, 0, &intracomm);
 			_children_is_empty = false;
