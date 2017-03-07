@@ -1,8 +1,8 @@
+rm(list= ls())
 library(Rmpi)
 library(fdaPDE2)
 
 source("../tests/mesh.R")
-
 ################################################################################
 # Edit here
 
@@ -22,13 +22,11 @@ f[[1]] <- function (x,y){sin(2*pi*x*y)}
 f[[2]] <- function (x,y){sin(2*pi*x)*sin(2*pi*y)}
 f[[3]] <- function (x,y){sin(3*pi*x)*cos(4*pi*y)}
 # The lambda to be used
-lambdat = seq(-3,1,0.25) 
-lambda = 10^lambdat
-#lambda = c(1)
+lambda = c(1)
 # The order of FEM
 order = 1
 # Numbers of realizations
-#nreal = 30 
+nreal = seq(100,1000,100) 
 ################################################################################
 
 n_meshes = length(N)
@@ -72,24 +70,30 @@ for (i in 1:n_meshes) {
     indeces_to_cut= sample(1:length(observations_on_nodes[[i]]), N[i] - n_observations[i], replace=F)
     observations_on_nodes[[i]][indeces_to_cut[]]=NaN
 }
+var_vector = vector("list", length(nreal) )
+var_vector_n = vector("integer", 100 )
+
 
 ######### COVARIATES, LOC NOT ON NODES 
 #brutto brutto
 
 cat("\nCOVARIATES, LOC NOT ON NODES\n\n")
-output_CPP_exact1 = smooth.FEM.basis(  
-                                observations = observations[[i]],
-                                locations=locations[[i]],
-                                FEMbasis = FEMbasis[[i]],
-                                lambda = lambda,
-                                covariates=covariates[[i]],
-                                GCV = TRUE,
-                                CPP_CODE = TRUE,
-                                GCVmethod=1 )
-edf_exact1 = output_CPP_exact1$edf
-gcv_exact1 = output_CPP_exact1$GCV
-
-output_CPP_stochastic1 = smooth.FEM.basis(  
+for ( j in 1:length(nreal))
+{
+	output_CPP_stochastic1 = smooth.FEM.basis(  
+	                                observations = observations[[i]],
+	                                locations=locations[[i]],
+	                                FEMbasis = FEMbasis[[i]],
+	                                lambda = lambda,
+	                                covariates=covariates[[i]],
+	                                GCV = TRUE,
+	                                CPP_CODE = TRUE,
+	                                GCVmethod=2,
+	                                nrealizations = nreal[j] ,
+	                                RNGstate = "")
+	RNG_state =  output_CPP_stochastic1$RNGstate
+	for ( k in 1:100){
+		output_CPP_stochastic1 = smooth.FEM.basis(  
                                 observations = observations[[i]],
                                 locations=locations[[i]],
                                 FEMbasis = FEMbasis[[i]],
@@ -98,53 +102,21 @@ output_CPP_stochastic1 = smooth.FEM.basis(
                                 GCV = TRUE,
                                 CPP_CODE = TRUE,
                                 GCVmethod=2,
-                                nrealizations = 1000 )
-edf_stochastic1 = output_CPP_stochastic1$edf
-gcv_stochastic1 = output_CPP_stochastic1$GCV
+                                nrealizations = nreal[j],
+                                RNGstate = RNG_state )
+		var_vector_n[k] = output_CPP_stochastic1$var
+		RNG_state =  output_CPP_stochastic1$RNGstate
+	}
+	var_vector[j]=var(var_vector_n)
+}
+logvar <-NULL
+for (i in 1:length(var_vector))
+	logvar=c(logvar,log(var_vector[[i]]))
 
-pdf('test1_edf')
-plot(lambda, edf_exact1,ylim = range(c(edf_exact1,edf_stochastic1)),type="s",col="blue",ylab="edf") 
-points(lambda, edf_stochastic1,type="s",col="red")
-legend ("topright",legend = c ("Exact","Stochastic"),col = c("blue","red"), lty=c(1,1))
+pdf("2_test1")
+plot(nreal, var_vector ,type="s",col="blue",ylab="var") 
 dev.off()
 
-pdf('test1_gcv')
-plot(lambda, gcv_exact1,ylim = range(c(gcv_exact1,gcv_stochastic1)),type="s",col="blue",,ylab="gcv")
-points(lambda, gcv_stochastic1,type="s",col="red")
-legend ("bottomright",legend = c ("Exact","Stochastic"),col = c("blue","red"), lty=c(1,1))
-dev.off()
-
-
-############ NO COVARIATES, LOC ON NODES
-#bello bello
-cat("\nNO COVARIATES, LOC ON NODES\n\n")
-output_CPP_exact2 =smooth.FEM.basis(observations = observations[[i]],
-                             FEMbasis = FEMbasis[[i]],
-                             lambda = lambda,
-                             GCV = TRUE,
-                             CPP_CODE = TRUE,
-                             GCVmethod = 1)
-edf_exact2 = output_CPP_exact2$edf
-gcv_exact2 = output_CPP_exact2$GCV
-
-output_CPP_stochastic2 =smooth.FEM.basis(observations = observations[[i]],
-                             FEMbasis = FEMbasis[[i]],
-                             lambda = lambda,
-                             GCV = TRUE,
-                             CPP_CODE = TRUE,
-                             nrealizations = 1000,
-                             GCVmethod = 2)
-edf_stochastic2 = output_CPP_stochastic2$edf
-gcv_stochastic2 = output_CPP_stochastic2$GCV
-
-pdf('test2_edf')
-plot(lambda, edf_exact2,ylim = range(c(edf_exact2,edf_stochastic2)),type="s",col="blue",ylab="edf") 
-points(lambda, edf_stochastic2,type="s",col="red")
-legend ("topright",legend = c ("Exact","Stochastic"),col = c("blue","red"), lty=c(1,1))
-dev.off()
-
-pdf('test2_gcv')
-plot(lambda, gcv_exact2,ylim = range(c(gcv_exact2,gcv_stochastic2)),type="s",col="blue", ylab="gcv")
-points(lambda, gcv_stochastic2,type="s",col="red")
-legend ("bottomright",legend = c ("Exact","Stochastic"),col = c("blue","red"), lty=c(1,1))
+pdf("prova")
+plot(log(nreal), logvar ,type="s",col="blue",ylab="log(var)") 
 dev.off()

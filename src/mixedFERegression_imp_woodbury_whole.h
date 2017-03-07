@@ -7,6 +7,8 @@
 #include <fstream>
 #include <chrono>
 
+#include "R_ext/Print.h"
+
 #include "mpi.h"
 #include "dmumps_c.h"
 #define JOB_INIT -1
@@ -232,7 +234,6 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedomEx
         dmumps_c(&id);
 
         if (myid==0){
-            std::cout << "rhs = " << std::endl;
             for (int i=0; i< nlocations; ++i){
                 std::cout << rhs_sparse[i] << std::endl;
                 degrees+=rhs_sparse[i];
@@ -292,7 +293,7 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedomEx
     }
     _dof[output_index] = degrees;
     _var[output_index] = 0;
-    std::cout << "Time required for GCV computation" << std::endl;
+    //std::cout << "Time required for GCV computation" << std::endl;
     clock.stop();
 }
 
@@ -307,7 +308,7 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedomSt
 	std::default_random_engine generator;
 	// Set the initial state of the random number generator
 	if (regressionData_.getRNGstate() != "") {
-	  std::cout << "SETTING RNG STATE: " << std::endl;
+	  //std::cout << "SETTING RNG STATE: " << std::endl;
 		std::stringstream initialRNGstate;
 		initialRNGstate << regressionData_.getRNGstate();
 		initialRNGstate >> generator;
@@ -360,9 +361,8 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedomSt
 	var -= mean*mean;
 	_var[output_index]=var;
 	Real std = sqrt(var);
-	std::cout << "edf mean = " << mean << std::endl;
-
-	std::cout << "Time required for GCV computation" << std::endl;
+	//std::cout << "edf mean = " << mean << std::endl;
+	//Rprintf("Time required for GCV computation\n ");
 	clock1.stop();
 }
 
@@ -621,7 +621,7 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::system_factorize() {
 	clock1.start();
 
 	// First phase: Factorization of matrix A
-	std::cout << "Factorization of A" << std::endl;
+	///std::cout << "Factorization of A" << std::endl;
 
 	// Invoke the factorization on matrix A
 	Adec_->factorize(A_);
@@ -629,7 +629,7 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::system_factorize() {
 	// We access to this phase only if there are covariates, otherwise  G = 0 (?)
 	if (regressionData_.getCovariates().rows() != 0) {
 		// Second phase: factorization of matrix  G =  C + [V * A^-1 * U]
-		std::cout << "Factorization of G" << std::endl;
+		///std::cout << "Factorization of G" << std::endl;
 
 		// Definition of matrix U = [ psi * W | 0 ]^T
 		MatrixXr W(this->regressionData_.getCovariates());
@@ -644,8 +644,8 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::system_factorize() {
 		Gdec_.compute(G);
 	}
 
-	std::cout << "Time required to factorize the system" << std::endl;
-	clock1.stop();
+	///std::cout << "Time required to factorize the system" << std::endl;
+	///clock1.stop();
 }
 
 template<typename InputHandler, typename Integrator, UInt ORDER>
@@ -656,13 +656,13 @@ MatrixXr MixedFERegression<InputHandler,Integrator,ORDER>::system_solve(const Ei
 	clock1.start();
 
 	// Resolution of the system A * x1 = b
-	std::cout << "Solving FEM: 1" << std::endl;
+	///std::cout << "Solving FEM: 1" << std::endl;
 	Adec_->solve(b);
 	MatrixXr x1 = Adec_->getSolution();
 	
 	// We access to this phase only if there are covariates, otherwise the solution is x1
 	if (regressionData_.getCovariates().rows() != 0) {
-		std::cout << "Solving FEM: 2" << std::endl;
+		///std::cout << "Solving FEM: 2" << std::endl;
 		// Resolution of G * x2 = U^T * x1
 		MatrixXr x2 = Gdec_.solve(U_.transpose()*x1);
 		// Resolution of the system A * x3 = U * x2
@@ -671,8 +671,8 @@ MatrixXr MixedFERegression<InputHandler,Integrator,ORDER>::system_solve(const Ei
 		x1 -= Adec_->getSolution();
 	}
 
-	std::cout << "Time required to solve the system" << std::endl;
-	clock1.stop();
+	///std::cout << "Time required to solve the system" << std::endl;
+	///clock1.stop();
 	return x1;
 }
 
