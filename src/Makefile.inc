@@ -1,5 +1,7 @@
 # Completare la variabile MUMPS PAHT con il percorso di mumps (CON I)
 # #da completare per utente
-MUMPS_I = -I/u/geo2/sw/Toolchains/gcc+system/4.8/Packages/libs/mumps-mpi/4.10/include
-MUMPS_L = -L/u/geo2/sw/Toolchains/gcc+system/4.8/Packages/libs/mumps-mpi/4.10/lib -L/u/geo2/sw/Toolchains/gcc+system/4.8/Packages/libs/scotch-mpi/5.1/lib
+MUMPS_I = -I/u/sw/pkgs/toolchains/gcc-glibc/5/pkgs/mumps/5.0.1/include
+MUMPS_L = -L/u/sw/pkgs/toolchains/gcc-glibc/5/pkgs/mumps/5.0.1/lib -L/u/sw/pkgs/toolchains/gcc-glibc/5/pkgs/scotch/6.0.4/lib
 MUMPS_l =  -ldmumps -lptscotcherr
+
+PKG_LIBS =$(MUMPS_L) $(MUMPS_l)
