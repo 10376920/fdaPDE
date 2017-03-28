@@ -1,5 +1,5 @@
 rm(list= ls())
-sink("output.txt")
+sink("output.txt", append = TRUE)
 library(Rmpi)
 library(fdaPDE2)
 
@@ -8,9 +8,9 @@ source("../tests/mesh.R")
 # Edit here
 
 # A vector containing the Ns of the grids to be used
-N = c(300)
+N = c(400)
 # The number of observations to be generated (same length as N)
-n_observations = c(300)
+n_observations = c(400)
 # The "true" coefficients of the covariates
 beta = rbind(0.2, -0.4, 0.7, -0.05)
 # Functions to be used to generate the covariates
@@ -28,6 +28,10 @@ lambda = c(1)
 order = 1
 # Numbers of realizations
 nreal = 1000
+# Number of processors
+args = commandArgs(TRUE)
+nproc = eval(parse(text=args[1]))
+cat("\nnproc =",nproc)
 ################################################################################
 
 n_meshes = length(N)
@@ -103,7 +107,8 @@ if (1) {
                          nrealizations = nreal,
                          GCVmethod = 2, RNGstate = "",
                          solver = "MumpsSparse",
-                         nprocessors = 1)
+                         nprocessors = nproc,
+                         hosts = "../../hosts")
         cat("edf = ", output_CPP_stochastic$edf)
         cat ("\n")
     }

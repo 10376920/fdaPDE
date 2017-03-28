@@ -3,14 +3,14 @@ sink("output.txt")
 library(Rmpi)
 library(fdaPDE2)
 
-source("../tests/mesh.R")
+source("mesh.R")
 ################################################################################
 # Edit here
 
 # A vector containing the Ns of the grids to be used
-N = c(20,30,40,50,60,70,80,90)
+N = c(20,30,40,50,60,70)
 # The number of observations to be generated (same length as N)
-n_observations = c(20,30,40,50,60,70,80,90)
+n_observations = c(20,30,40,50,60,70)
 # The "true" coefficients of the covariates
 beta = rbind(0.2, -0.4, 0.7, -0.05)
 # Functions to be used to generate the covariates
@@ -27,7 +27,7 @@ lambda = c(1)
 # The order of FEM
 order = 1
 # Numbers of realizations
-nreal = 1000
+nreal = 500
 ################################################################################
 
 n_meshes = length(N)
