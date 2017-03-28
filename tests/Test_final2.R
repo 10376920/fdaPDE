@@ -2,7 +2,7 @@ rm(list= ls())
 library(Rmpi)
 library(fdaPDE2)
 
-source("../tests/mesh.R")
+source("mesh.R")
 ################################################################################
 # Edit here
 
@@ -26,7 +26,7 @@ lambda = c(1)
 # The order of FEM
 order = 1
 # Numbers of realizations
-nreal = seq(100,1000,100) 
+nreal = seq(100,1000,50) 
 ################################################################################
 
 n_meshes = length(N)
@@ -71,7 +71,7 @@ for (i in 1:n_meshes) {
     observations_on_nodes[[i]][indeces_to_cut[]]=NaN
 }
 var_vector = vector("list", length(nreal) )
-var_vector_n = vector("integer", 100 )
+edf_vector_n = vector("integer", 100 )
 
 
 ######### COVARIATES, LOC NOT ON NODES 
@@ -92,7 +92,7 @@ for ( j in 1:length(nreal))
 	                                nrealizations = nreal[j] ,
 	                                RNGstate = "")
 	RNG_state =  output_CPP_stochastic1$RNGstate
-	for ( k in 1:100){
+	for ( k in 1:200){
 		output_CPP_stochastic1 = smooth.FEM.basis(  
                                 observations = observations[[i]],
                                 locations=locations[[i]],
@@ -104,10 +104,10 @@ for ( j in 1:length(nreal))
                                 GCVmethod=2,
                                 nrealizations = nreal[j],
                                 RNGstate = RNG_state )
-		var_vector_n[k] = output_CPP_stochastic1$var
+		edf_vector_n[k] = output_CPP_stochastic1$edf
 		RNG_state =  output_CPP_stochastic1$RNGstate
 	}
-	var_vector[j]=var(var_vector_n)
+	var_vector[j]=var(edf_vector_n)
 }
 logvar <-NULL
 for (i in 1:length(var_vector))

@@ -1,15 +1,15 @@
 library(Rmpi)
 library(fdaPDE2)
 
-source("../tests/mesh.R")
+source("mesh.R")
 
 ################################################################################
 # Edit here
 
 # A vector containing the Ns of the grids to be used
-N = c(20)
+N = c(30)
 # The number of observations to be generated (same length as N)
-n_observations = c(20)
+n_observations = c(30)
 # The "true" coefficients of the covariates
 beta = rbind(0.2, -0.4, 0.7, -0.05)
 # Functions to be used to generate the covariates
@@ -102,16 +102,16 @@ output_CPP_stochastic1 = smooth.FEM.basis(
 edf_stochastic1 = output_CPP_stochastic1$edf
 gcv_stochastic1 = output_CPP_stochastic1$GCV
 
-pdf('test1_edf')
-plot(lambda, edf_exact1,ylim = range(c(edf_exact1,edf_stochastic1)),type="s",col="blue",ylab="edf") 
-points(lambda, edf_stochastic1,type="s",col="red")
-legend ("topright",legend = c ("Exact","Stochastic"),col = c("blue","red"), lty=c(1,1))
+pdf('test11_edf')
+plot(lambda, edf_exact1,ylim = range(c(edf_exact1,edf_stochastic1)),lwd = 2,type="s",col="blue",ylab="edf") 
+points(lambda, edf_stochastic1, lwd = 2, type="s",col="red")
+legend ("topright",legend = c ("Exact","Stochastic"),col = c("blue","red"), lty=c(1,1),lwd=c(3,3))
 dev.off()
 
-pdf('test1_gcv')
-plot(lambda, gcv_exact1,ylim = range(c(gcv_exact1,gcv_stochastic1)),type="s",col="blue",,ylab="gcv")
-points(lambda, gcv_stochastic1,type="s",col="red")
-legend ("bottomright",legend = c ("Exact","Stochastic"),col = c("blue","red"), lty=c(1,1))
+pdf('test11_gcv')
+plot(lambda, gcv_exact1,ylim = range(c(gcv_exact1,gcv_stochastic1)),lwd = 2, type="s",col="blue",ylab="gcv")
+points(lambda, gcv_stochastic1,lwd = 2, type="s",col="red")
+legend ("bottomright",legend = c ("Exact","Stochastic"),col = c("blue","red"), lty=c(1,1),lwd=c(3,3))
 dev.off()
 
 
@@ -137,14 +137,14 @@ output_CPP_stochastic2 =smooth.FEM.basis(observations = observations[[i]],
 edf_stochastic2 = output_CPP_stochastic2$edf
 gcv_stochastic2 = output_CPP_stochastic2$GCV
 
-pdf('test2_edf')
-plot(lambda, edf_exact2,ylim = range(c(edf_exact2,edf_stochastic2)),type="s",col="blue",ylab="edf") 
-points(lambda, edf_stochastic2,type="s",col="red")
-legend ("topright",legend = c ("Exact","Stochastic"),col = c("blue","red"), lty=c(1,1))
+pdf('test12_edf')
+plot(lambda, edf_exact2,ylim = range(c(edf_exact2,edf_stochastic2)),lwd = 2,type="s",col="blue",ylab="edf") 
+points(lambda, edf_stochastic2,lwd = 2,type="s",col="red")
+legend ("topright",legend = c ("Exact","Stochastic"),col = c("blue","red"), lty=c(1,1),lwd=c(3,3))
 dev.off()
 
-pdf('test2_gcv')
-plot(lambda, gcv_exact2,ylim = range(c(gcv_exact2,gcv_stochastic2)),type="s",col="blue", ylab="gcv")
-points(lambda, gcv_stochastic2,type="s",col="red")
-legend ("bottomright",legend = c ("Exact","Stochastic"),col = c("blue","red"), lty=c(1,1))
+pdf('test12_gcv')
+plot(lambda, gcv_exact2,ylim = range(c(gcv_exact2,gcv_stochastic2)),lwd = 2, type="s",col="blue", ylab="gcv")
+points(lambda, gcv_stochastic2,lwd = 2,type="s",col="red")
+legend ("topright",legend = c ("Exact","Stochastic"),col = c("blue","red"), lty=c(1,1),lwd=c(3,3))
 dev.off()
