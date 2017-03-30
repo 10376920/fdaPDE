@@ -16,7 +16,7 @@
 #define USE_COMM_WORLD -987654
 
 template<typename InputHandler, typename Integrator, UInt ORDER>
-void MixedFERegression<InputHandler,Integrator,ORDER>::addDirichletBC()//const vector<int>& bcindex, const vector<Real>& bcvalues
+void MixedFERegression<InputHandler,Integrator,ORDER>::addDirichletBC()
 {
 	UInt id1,id3;
 
@@ -33,8 +33,6 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::addDirichletBC()//const v
 			id1=bc_indices[i];
 			id3=id1+nnodes;
 
-			//_coeffmatrix.prune([id1,id3](int i, int j, Real) { return (i!=id1 && i!=id3); });
-
 			A_.coeffRef(id1,id1)=pen;
 			A_.coeffRef(id3,id3)=pen;
 
@@ -49,18 +47,10 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::addDirichletBC()//const v
 template<typename InputHandler, typename Integrator, UInt ORDER>
 void MixedFERegression<InputHandler,Integrator,ORDER>::setPsi(){
 
-	//std::cout<<"Data Matrix Computation by Basis Evaluation.."<<std::endl;
 	UInt nnodes = mesh_.num_nodes();
 	UInt nlocations = regressionData_.getNumberofObservations();
 
-	//cout<<"Nodes number "<<nnodes<<"Locations number "<<nlocations<<endl;
-
-	//std::vector<coeff> entries;
-	//entries.resize((ORDER * 3)*nlocations);
-
-
 	psi_.resize(nlocations, nnodes);
-	//psi_.reserve(Eigen::VectorXi::Constant(nlocations,ORDER*3));
 	if (regressionData_.isLocationsByNodes()){
 		std::vector<coeff> tripletAll;
 		auto k = regressionData_.getObservationsIndices();
@@ -109,7 +99,6 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::getRightHandData(VectorXr
 {
 	UInt nnodes = mesh_.num_nodes();
 	UInt nlocations = regressionData_.getNumberofObservations();
-	//rightHandData.resize(nnodes);
 	rightHandData = VectorXr::Zero(nnodes);
 
 	if(regressionData_.getCovariates().rows() == 0)
@@ -153,11 +142,12 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedomEx
 {
    	timer clock;
 	clock.start();
+
     UInt nnodes = mesh_.num_nodes();
 	UInt nlocations = regressionData_.getNumberofObservations();
     Real degrees=0;
 
-    //if caso bello bello
+    // Case 1: MUMPS
     if (regressionData_.isLocationsByNodes() && regressionData_.getCovariates().rows() == 0 )
     {
         auto k = regressionData_.getObservationsIndices();
@@ -218,12 +208,11 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedomEx
         id.rhs_sparse=rhs_sparse;
 
         #define ICNTL(I) icntl[(I)-1]
-//        id.ICNTL(1)=-1;
-//        id.ICNTL(2)=-1;
-//        id.ICNTL(3)=-1;
-//        id.ICNTL(4)=0;
-        id.ICNTL(5)=0;
-        id.ICNTL(18)=0;
+        //Output messages suppressed
+        id.ICNTL(1)=-1;
+        id.ICNTL(2)=-1;
+        id.ICNTL(3)=-1;
+        id.ICNTL(4)=0;
         id.ICNTL(20)=1;
         id.ICNTL(30)=1;
         id.ICNTL(14)=200;
@@ -235,13 +224,13 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedomEx
 
         if (myid==0){
             for (int i=0; i< nlocations; ++i){
-                std::cout << rhs_sparse[i] << std::endl;
                 degrees+=rhs_sparse[i];
             }
         }
         free(rhs_sparse);
     }
-    else{ //non siamo nel caso 4 => montare i solver   
+    // Case 2: Eigen
+    else{   
         MatrixXr DMat = psi_.transpose() * LeftMultiplybyQ(psi_);
         Eigen::SparseLU<SpMat> solver;
         solver.compute(MMat_);
@@ -254,7 +243,6 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedomEx
         MatrixXr Td = DMat + temp;
         Eigen::LLT<MatrixXr> Dsolver(Td);
 
-        //caso 3)
         if(regressionData_.isLocationsByNodes() && regressionData_.getCovariates().rows() != 0) {
             // Setup rhs B
             MatrixXr B;
@@ -278,11 +266,9 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedomEx
             }
         }
 
-        //if casi 1) e 2)
         if (!regressionData_.isLocationsByNodes()){
             MatrixXr X;
             X = Dsolver.solve(MatrixXr(DMat));
-            //solo in caso 1) con covariate
             if (regressionData_.getCovariates().rows() != 0) {
                 degrees += regressionData_.getCovariates().cols();
             }
@@ -327,7 +313,7 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedomSt
 			}
 		}
 	}
-	// We have finished using the random number generator: we can save its state
+	// Save state of random number generator
 	std::stringstream finalRNGstate;
 	finalRNGstate << generator;
 	finalRNGstate >> _finalRNGstate;
@@ -354,13 +340,12 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedomSt
 		var += edf_vect(i)*edf_vect(i);
 	}
 
-	// Estimates: sample mean, sample variance, sample standard variation
+	// Estimates: sample mean, sample variance
 	Real mean = edf_vect.sum()/nrealizations;
 	_dof[output_index] = mean;
 	var /= nrealizations;
 	var -= mean*mean;
 	_var[output_index]=var;
-	Real std = sqrt(var);
 	//std::cout << "edf mean = " << mean << std::endl;
 	//Rprintf("Time required for GCV computation\n ");
 	clock1.stop();
@@ -617,19 +602,12 @@ template<typename InputHandler, typename Integrator, UInt ORDER>
 void MixedFERegression<InputHandler,Integrator,ORDER>::system_factorize() {
 
 	UInt nnodes = mesh_.num_nodes();
-	timer clock1;
-	clock1.start();
 
 	// First phase: Factorization of matrix A
-	///std::cout << "Factorization of A" << std::endl;
-
-	// Invoke the factorization on matrix A
 	Adec_->factorize(A_);
 	
-	// We access to this phase only if there are covariates, otherwise  G = 0 (?)
 	if (regressionData_.getCovariates().rows() != 0) {
 		// Second phase: factorization of matrix  G =  C + [V * A^-1 * U]
-		///std::cout << "Factorization of G" << std::endl;
 
 		// Definition of matrix U = [ psi * W | 0 ]^T
 		MatrixXr W(this->regressionData_.getCovariates());
@@ -643,36 +621,25 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::system_factorize() {
 		MatrixXr G = -W.transpose()*W + D;
 		Gdec_.compute(G);
 	}
-
-	///std::cout << "Time required to factorize the system" << std::endl;
-	///clock1.stop();
 }
 
 template<typename InputHandler, typename Integrator, UInt ORDER>
 template<typename Derived>
 MatrixXr MixedFERegression<InputHandler,Integrator,ORDER>::system_solve(const Eigen::MatrixBase<Derived> &b) {
-	
-	timer clock1;
-	clock1.start();
 
 	// Resolution of the system A * x1 = b
-	///std::cout << "Solving FEM: 1" << std::endl;
 	Adec_->solve(b);
 	MatrixXr x1 = Adec_->getSolution();
 	
-	// We access to this phase only if there are covariates, otherwise the solution is x1
 	if (regressionData_.getCovariates().rows() != 0) {
-		///std::cout << "Solving FEM: 2" << std::endl;
 		// Resolution of G * x2 = U^T * x1
 		MatrixXr x2 = Gdec_.solve(U_.transpose()*x1);
 		// Resolution of the system A * x3 = U * x2
 		Adec_->solve(U_*x2);
-		// We add the latest result to the x1 we computed previously
+		// Add the latest result to the x1 computed previously
 		x1 -= Adec_->getSolution();
 	}
 
-	///std::cout << "Time required to solve the system" << std::endl;
-	///clock1.stop();
 	return x1;
 }
 

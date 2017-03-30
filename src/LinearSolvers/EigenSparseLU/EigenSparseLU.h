@@ -5,13 +5,13 @@
 
 namespace LinearSolvers {
 
-class EigenSparseLU: public SpLinearSolver {
-	private:
-	Eigen::SparseLU<Eigen::SparseMatrix<double>> _solver;
-	public:
-	virtual void factorize(const Eigen::SparseMatrix<double> &);
-	virtual void solve(const Eigen::MatrixXd &);
-};
+	class EigenSparseLU: public SpLinearSolver {
+		private:
+		Eigen::SparseLU<Eigen::SparseMatrix<double>> _solver;
+		public:
+		virtual void factorize(const Eigen::SparseMatrix<double> &);
+		virtual void solve(const Eigen::MatrixXd &);
+	};
 
 }
 

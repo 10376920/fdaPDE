@@ -26,7 +26,7 @@ lambda = c(1)
 # The order of FEM
 order = 1
 # Numbers of realizations
-nreal = seq(100,1000,50) 
+nreal = c(100, 200, 400, 800, 1600)
 ################################################################################
 
 n_meshes = length(N)
@@ -75,7 +75,6 @@ edf_vector_n = vector("integer", 100 )
 
 
 ######### COVARIATES, LOC NOT ON NODES 
-#brutto brutto
 
 cat("\nCOVARIATES, LOC NOT ON NODES\n\n")
 for ( j in 1:length(nreal))
@@ -110,13 +109,14 @@ for ( j in 1:length(nreal))
 	var_vector[j]=var(edf_vector_n)
 }
 logvar <-NULL
-for (i in 1:length(var_vector))
+for (i in 1:length(var_vector)){
 	logvar=c(logvar,log(var_vector[[i]]))
+}
 
-pdf("2_test1")
-plot(nreal, var_vector ,type="s",col="blue",ylab="var") 
-dev.off()
-
-pdf("prova")
-plot(log(nreal), logvar ,type="s",col="blue",ylab="log(var)") 
+pdf("2_testlog")
+plot(log(nreal), logvar ,ylim = range(c(logvar,-log(nreal))),col="blue",lwd = 2,xlab= "log(nrealization)", ylab="log(var)") 
+points (log(nreal), -log(nreal), lwd = 2,col="red")
+lines(log(nreal), logvar ,col="blue",lwd = 2, )
+lines(log(nreal), -log(nreal),lwd = 2,col="red")
+legend ("topright",legend = c ("Computed","1/nreal"),col = c("blue","red"), lty=c(1,1),lwd=c(3,3))
 dev.off()

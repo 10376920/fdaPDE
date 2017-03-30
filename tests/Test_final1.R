@@ -1,3 +1,4 @@
+rm(list= ls())
 library(Rmpi)
 library(fdaPDE2)
 
@@ -24,7 +25,6 @@ f[[3]] <- function (x,y){sin(3*pi*x)*cos(4*pi*y)}
 # The lambda to be used
 lambdat = seq(-3,1,0.25) 
 lambda = 10^lambdat
-#lambda = c(1)
 # The order of FEM
 order = 1
 # Numbers of realizations
@@ -74,8 +74,6 @@ for (i in 1:n_meshes) {
 }
 
 ######### COVARIATES, LOC NOT ON NODES 
-#brutto brutto
-
 cat("\nCOVARIATES, LOC NOT ON NODES\n\n")
 output_CPP_exact1 = smooth.FEM.basis(  
                                 observations = observations[[i]],
@@ -116,7 +114,6 @@ dev.off()
 
 
 ############ NO COVARIATES, LOC ON NODES
-#bello bello
 cat("\nNO COVARIATES, LOC ON NODES\n\n")
 output_CPP_exact2 =smooth.FEM.basis(observations = observations[[i]],
                              FEMbasis = FEMbasis[[i]],

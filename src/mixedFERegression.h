@@ -9,7 +9,6 @@
 #include "regressionData.h"
 #include "solver.h"
 #include <memory>
-//#include "LinearSolvers/SpLinearSolver.h"
 #include "EigenSparseLU.h"
 #include "MumpsSparse.h"
 #include "Proxy.hpp"
@@ -27,25 +26,23 @@ class MixedFERegression{
 		const InputHandler& regressionData_;
 		std::vector<coeff> tripletsData_;
 
-		
+		SpMat A_;		// System matrix with psi^T*psi in north-west block
+		SpMat AMat_;	// North-east block of system matrix A_
+		SpMat MMat_;	// South-east block of system matrix A_
 		SpMat psi_;
-		SpMat AMat_;
-		SpMat MMat_;
-		SpMat A_;		// system matrix with psi^T*psi in north-west block
 		MatrixXr U_;	// psi^T*W padded with zeros
 		
 		
-		std::unique_ptr<LinearSolvers::SpLinearSolver> Adec_;
-		Eigen::PartialPivLU<MatrixXr> Gdec_;
-		
+		std::unique_ptr<LinearSolvers::SpLinearSolver> Adec_; // Stores the factorization of A_
+		Eigen::PartialPivLU<MatrixXr> Gdec_;	// Stores factorization of G =  C + [V * A^-1 * U]
+		Eigen::PartialPivLU<MatrixXr> WTWinv_;	// Stores the factorization of W^T * W
+		bool isWTWfactorized_;
+
 		VectorXr _b;                     //!A Eigen::VectorXr: Stores the system right hand side.
 		std::vector<VectorXr> _solution; //!A Eigen::VectorXr : Stores the system solution
 		std::vector<Real> _dof;
 		std::vector<Real> _var;
 		std::string _finalRNGstate;
-
-		Eigen::PartialPivLU<MatrixXr> WTWinv_;
-		bool isWTWfactorized_;
 
 		void setPsi();
 		void buildA(const SpMat& Psi,  const SpMat& AMat,  const SpMat& MMat);
@@ -66,6 +63,10 @@ class MixedFERegression{
 			// Definition of a list of parameters for the solver
 			LinearSolvers::ParameterList list;
 			if(solver_name == "MumpsSparse") {
+				list.set("icntl[1]", -1);
+				list.set("icntl[2]", -1);
+				list.set("icntl[3]", -1);
+				list.set("icntl[4]", 0);
 				list.set("icntl[14]", 200);
 				list.set("sym", 2);
 				list.set("nproc", regressionData_.getnprocessors());
@@ -74,48 +75,32 @@ class MixedFERegression{
 			Adec_->setParameters(list);
 		};
 		
-		//!A Destructor
-		//~Model(){};
-		
 		void smoothLaplace();
 		void smoothEllipticPDE();
 		void smoothEllipticPDESpaceVarying();
 
-		 //! A template member for the system resolution.
-         /*! the template P is the solutor, possible choices are: SpLu, SpQR, SpCholesky,SpConjGrad.
-          *  the solution is stored in _solution		
-		*/
+		//  //! A template member for the system resolution.
+  //        ! the template P is the solutor, possible choices are: SpLu, SpQR, SpCholesky,SpConjGrad.
+  //         *  the solution is stored in _solution		
+		// template<typename P>
+		// void solve(UInt output_index);
 
-		template<typename P>
-		void solve(UInt output_index);
-		void system_factorize();
-		template<typename Derived>
-		MatrixXr system_solve(const Eigen::MatrixBase<Derived>&);
-		//! A inline member that returns a VectorXr, returns the whole _solution. 
 		inline std::vector<VectorXr> const & getSolution() const{return _solution;};
 		inline std::vector<Real> const & getDOF() const{return _dof;};
 		inline std::vector<Real> const & getVar() const{return _var;};
 		inline std::string const & getFinalRNGstate() const{return _finalRNGstate;}
 
-		//Real eval_sol(MeshTria const & mesh,VectorXr Point p);
-		//! A member for printing the solution.
-		//void printSolution(std::ostream & out) {out<<_solution; out<<"dim"<<_solution.rows()<<"x"<<_solution.cols();};
-		//apply dirichlet boundary condition (first attempt)
-		//void applyDir(int* bcindex, double* bcvalues, int n_b, UInt order);
-		 //! A normal member taking two arguments: Dirichlet Boundary condition
-		 /*!
-		  * This member applies Dirichlet boundary conditions on the linear system with the penalization method.
-		\param bcindex is a const reference to vector<int> : the global indexes of the nodes to which the boundary condition has to be applied.
-		\param bcvalues is a const reference to vector<double> : the values of the boundary conditions relative to bcindex.
-		\the method modifies _coeffmatrix and _b
-		*/		
 		void addDirichletBC();
 		void getRightHandData(VectorXr& rightHandData);
 		void computeDegreesOfFreedom(UInt output_index, Real lambda);
 		void computeDegreesOfFreedomExact(UInt output_index, Real lambda);
 		void computeDegreesOfFreedomStochastic(UInt output_index, Real lambda);
+
+		void system_factorize();
+		template<typename Derived>
+		MatrixXr system_solve(const Eigen::MatrixBase<Derived>&);
 };
 
-#include "mixedFERegression_imp_woodbury_whole.h"
+#include "mixedFERegression_imp.h"
 
 #endif

@@ -17,13 +17,10 @@ int main (int argc,char** argv){
 	id.comm_fortran= (MUMPS_INT) MPI_Comm_c2f(intracomm);
 	dmumps_c(&id);
 	do{
-		//MPI_Bcast(id.icntl, 40, MPI_INT, 0, parent);
 		MPI_Bcast(&id.job, 1, MPI_INT, 0, parent);
 		id.sym=0;
 		dmumps_c(&id);
 	} while(id.job != -2);
-
-	// id.job = 3;
-	// dmumps_c(&id);
+	
 	MPI_Finalize ();
 }

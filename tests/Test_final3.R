@@ -3,7 +3,7 @@ sink("output.txt", append = TRUE)
 library(Rmpi)
 library(fdaPDE2)
 
-source("../tests/mesh.R")
+source("mesh.R")
 ################################################################################
 # Edit here
 
@@ -31,7 +31,6 @@ nreal = 1000
 # Number of processors
 args = commandArgs(TRUE)
 nproc = eval(parse(text=args[1]))
-cat("\nnproc =",nproc)
 ################################################################################
 
 n_meshes = length(N)
