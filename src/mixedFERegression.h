@@ -27,13 +27,14 @@ class MixedFERegression{
 		std::vector<coeff> tripletsData_;
 
 		SpMat A_;		// System matrix with psi^T*psi in north-west block
-		SpMat AMat_;	// North-east block of system matrix A_
-		SpMat MMat_;	// South-east block of system matrix A_
+		SpMat R1_;	// North-east block of system matrix A_
+		SpMat R0_;	// South-east block of system matrix A_
 		SpMat psi_;
 		MatrixXr U_;	// psi^T*W padded with zeros
 		
 		
 		std::unique_ptr<LinearSolvers::SpLinearSolver> Adec_; // Stores the factorization of A_
+		LinearSolvers::ParameterList Adec_list_;
 		Eigen::PartialPivLU<MatrixXr> Gdec_;	// Stores factorization of G =  C + [V * A^-1 * U]
 		Eigen::PartialPivLU<MatrixXr> WTWinv_;	// Stores the factorization of W^T * W
 		bool isWTWfactorized_;
@@ -45,45 +46,16 @@ class MixedFERegression{
 		std::string _finalRNGstate;
 
 		void setPsi();
-		void buildA(const SpMat& Psi,  const SpMat& AMat,  const SpMat& MMat);
+		void buildA(const SpMat& Psi,  const SpMat& R1,  const SpMat& R0);
 		MatrixXr LeftMultiplybyQ(const MatrixXr& u);
 
 	public:
 		//!A Constructor.
-		MixedFERegression(const MeshHandler<ORDER>& mesh, const InputHandler& regressionData):
-			mesh_(mesh),
-			regressionData_(regressionData),
-			isWTWfactorized_(false)
-		{
-			std::string solver_name = regressionData_.getSolver();
-			LSProxy<LinearSolvers::EigenSparseLU> dummy1("EigenSparseLU");
-			LSProxy<LinearSolvers::MumpsSparse> dummy2("MumpsSparse");
-			LSFactory & LSfactory=LSFactory::Instance();
-			Adec_ = LSfactory.create(solver_name); 
-			// Definition of a list of parameters for the solver
-			LinearSolvers::ParameterList list;
-			if(solver_name == "MumpsSparse") {
-				list.set("icntl[1]", -1);
-				list.set("icntl[2]", -1);
-				list.set("icntl[3]", -1);
-				list.set("icntl[4]", 0);
-				list.set("icntl[14]", 200);
-				list.set("sym", 2);
-				list.set("nproc", regressionData_.getnprocessors());
-				list.set("hosts", regressionData_.getHosts());
-			}
-			Adec_->setParameters(list);
-		};
-		
+		MixedFERegression(const MeshHandler<ORDER>& mesh, const InputHandler& regressionData);
+
 		void smoothLaplace();
 		void smoothEllipticPDE();
 		void smoothEllipticPDESpaceVarying();
-
-		//  //! A template member for the system resolution.
-  //        ! the template P is the solutor, possible choices are: SpLu, SpQR, SpCholesky,SpConjGrad.
-  //         *  the solution is stored in _solution		
-		// template<typename P>
-		// void solve(UInt output_index);
 
 		inline std::vector<VectorXr> const & getSolution() const{return _solution;};
 		inline std::vector<Real> const & getDOF() const{return _dof;};

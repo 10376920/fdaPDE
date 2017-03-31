@@ -16,6 +16,31 @@
 #define USE_COMM_WORLD -987654
 
 template<typename InputHandler, typename Integrator, UInt ORDER>
+MixedFERegression<InputHandler,Integrator,ORDER>::MixedFERegression(const MeshHandler<ORDER>& mesh, const InputHandler& regressionData):
+	mesh_(mesh),
+	regressionData_(regressionData),
+	isWTWfactorized_(false)
+{
+	std::string solver_name = regressionData_.getSolver();
+	LSProxy<LinearSolvers::EigenSparseLU> dummy1("EigenSparseLU");
+	LSProxy<LinearSolvers::MumpsSparse> dummy2("MumpsSparse");
+	LSFactory & LSfactory=LSFactory::Instance();
+	Adec_ = LSfactory.create(solver_name);
+	// Definition of a list of parameters for the solver
+	if(solver_name == "MumpsSparse") {
+		Adec_list_.set("icntl[1]", -1);
+		Adec_list_.set("icntl[2]", -1);
+		Adec_list_.set("icntl[3]", -1);
+		Adec_list_.set("icntl[4]", 0);
+		Adec_list_.set("icntl[14]", 200);
+		Adec_list_.set("sym", 2);
+		Adec_list_.set("nproc", regressionData_.getnprocessors());
+		Adec_list_.set("hosts", regressionData_.getHosts());
+	}
+	Adec_->setParameters(Adec_list_);
+};
+
+template<typename InputHandler, typename Integrator, UInt ORDER>
 void MixedFERegression<InputHandler,Integrator,ORDER>::addDirichletBC()
 {
 	UInt id1,id3;
@@ -58,10 +83,10 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::setPsi(){
 		for (int i = 0; i< k.size(); ++i){
 			tripletAll.push_back(coeff(i,k[i],1.0));
 		}
-    	psi_.setFromTriplets(tripletAll.begin(),tripletAll.end());
-    	psi_.makeCompressed();
-    }
-    else {
+		psi_.setFromTriplets(tripletAll.begin(),tripletAll.end());
+		psi_.makeCompressed();
+	}
+	else {
 		Triangle<ORDER*3> tri_activated;
 		Eigen::Matrix<Real,ORDER * 3,1> coefficients;
 
@@ -140,147 +165,149 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedom(U
 template<typename InputHandler, typename Integrator, UInt ORDER>
 void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedomExact(UInt output_index, Real lambda)
 {
-   	timer clock;
+	timer clock;
 	clock.start();
 
-    UInt nnodes = mesh_.num_nodes();
+	UInt nnodes = mesh_.num_nodes();
 	UInt nlocations = regressionData_.getNumberofObservations();
-    Real degrees=0;
+	Real degrees=0;
 
-    // Case 1: MUMPS
-    if (regressionData_.isLocationsByNodes() && regressionData_.getCovariates().rows() == 0 )
-    {
-        auto k = regressionData_.getObservationsIndices();
-        DMUMPS_STRUC_C id;
-        int myid, ierr;
-        ierr = MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+	// Case 1: MUMPS
+	if (regressionData_.isLocationsByNodes() && regressionData_.getCovariates().rows() == 0 )
+	{
+		auto k = regressionData_.getObservationsIndices();
+		DMUMPS_STRUC_C id;
+		int myid, ierr;
+		ierr = MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
-        id.sym=0;
-        id.par=1;
-        id.job=JOB_INIT;
-        id.comm_fortran=USE_COMM_WORLD;
-        dmumps_c(&id);
+		id.sym=0;
+		id.par=1;
+		id.job=JOB_INIT;
+		id.comm_fortran=USE_COMM_WORLD;
+		dmumps_c(&id);
 
-        std::vector<int> irn;
-        std::vector<int> jcn;
-        std::vector<double> a;
-        std::vector<int> irhs_ptr;
-        std::vector<int> irhs_sparse;
-        double* rhs_sparse= (double*)malloc(nlocations*sizeof(double));
-        
-        if( myid==0){
-            id.n=2*nnodes;
-            for (int j=0; j<A_.outerSize(); ++j){
-                for (SpMat::InnerIterator it(A_,j); it; ++it){
-                	
-                    irn.push_back(it.row()+1);
-                    jcn.push_back(it.col()+1);
-                    a.push_back(it.value());
-                }
-            }
-        }
-        id.nz=irn.size();
-        id.irn=irn.data();
-        id.jcn=jcn.data();
-        id.a=a.data();
-        id.nz_rhs=nlocations;
-        id.nrhs=2*nnodes;
-        int j = 1;
-        irhs_ptr.push_back(j);
-        for (int l=0; l<k[0]-1; ++l) {
-            irhs_ptr.push_back(j);
-        }
-        for (int i=0; i<k.size()-1; ++i) {
-            ++j;
-            for (int l=0; l<k[i+1]-k[i]; ++l) {
-                irhs_ptr.push_back(j);
-            }
-        }
-        ++j;
-        for (int i=k[k.size()-1]; i < id.nrhs; ++i) {
-            irhs_ptr.push_back(j);
-        }
-        for (int i=0; i<nlocations; ++i){
-            irhs_sparse.push_back(k[i]+1);
-        }
-        id.irhs_sparse=irhs_sparse.data();
-        id.irhs_ptr=irhs_ptr.data();
-        id.rhs_sparse=rhs_sparse;
-
-        #define ICNTL(I) icntl[(I)-1]
-        //Output messages suppressed
-        id.ICNTL(1)=-1;
-        id.ICNTL(2)=-1;
-        id.ICNTL(3)=-1;
-        id.ICNTL(4)=0;
-        id.ICNTL(20)=1;
-        id.ICNTL(30)=1;
-        id.ICNTL(14)=200;
-
-        id.job=6;
-        dmumps_c(&id);
-        id.job=JOB_END;
-        dmumps_c(&id);
-
-        if (myid==0){
-            for (int i=0; i< nlocations; ++i){
-                degrees+=rhs_sparse[i];
-            }
-        }
-        free(rhs_sparse);
-    }
-    // Case 2: Eigen
-    else{   
-        MatrixXr DMat = psi_.transpose() * LeftMultiplybyQ(psi_);
-        Eigen::SparseLU<SpMat> solver;
-        solver.compute(MMat_);
-        SpMat U = solver.solve(AMat_);
-        MatrixXr Ud = MatrixXr(U);
-        auto k = regressionData_.getObservationsIndices();
-        SpMat tempSparse = lambda*AMat_.transpose()*U;
-		MatrixXr temp = MatrixXr(tempSparse);
+		std::vector<int> irn;
+		std::vector<int> jcn;
+		std::vector<double> a;
+		std::vector<int> irhs_ptr;
+		std::vector<int> irhs_sparse;
+		double* rhs_sparse= (double*)malloc(nlocations*sizeof(double));
 		
-        MatrixXr Td = DMat + temp;
-        Eigen::LLT<MatrixXr> Dsolver(Td);
+		if( myid==0){
+			id.n=2*nnodes;
+			for (int j=0; j<A_.outerSize(); ++j){
+				for (SpMat::InnerIterator it(A_,j); it; ++it){
+					irn.push_back(it.row()+1);
+					jcn.push_back(it.col()+1);
+					a.push_back(it.value());
+				}
+			}
+		}
+		id.nz=irn.size();
+		id.irn=irn.data();
+		id.jcn=jcn.data();
+		id.a=a.data();
+		id.nz_rhs=nlocations;
+		id.nrhs=2*nnodes;
+		int j = 1;
+		irhs_ptr.push_back(j);
+		for (int l=0; l<k[0]-1; ++l) {
+			irhs_ptr.push_back(j);
+		}
+		for (int i=0; i<k.size()-1; ++i) {
+			++j;
+			for (int l=0; l<k[i+1]-k[i]; ++l) {
+				irhs_ptr.push_back(j);
+			}
+			
+		}
+		++j;
+		for (int i=k[k.size()-1]; i < id.nrhs; ++i) {
+			irhs_ptr.push_back(j);
+		}
+		for (int i=0; i<nlocations; ++i){
+			irhs_sparse.push_back(k[i]+1);
+		}
+		id.irhs_sparse=irhs_sparse.data();
+		id.irhs_ptr=irhs_ptr.data();
+		id.rhs_sparse=rhs_sparse;
 
-        if(regressionData_.isLocationsByNodes() && regressionData_.getCovariates().rows() != 0) {
-            // Setup rhs B
-            MatrixXr B;
-            B = MatrixXr::Zero(nnodes,nlocations);
-            degrees += regressionData_.getCovariates().cols();
-            // B = I(:,k) * Q
-            for (auto i=0; i<nlocations;++i) {
-            	VectorXr ei = VectorXr::Zero(nlocations);
-            	ei(i) = 1;
-            	VectorXr Qi = LeftMultiplybyQ(ei);
-                for (int j=0; j<nlocations; ++j) {
-                    B(k[i], j) = Qi(j);
-                }
-            }
-            // Solve the system TX = B
-            MatrixXr X;
-            X=Dsolver.solve(B);
-            // Compute trace(X(k,:))
-            for (int i = 0; i < k.size(); ++i) {
-                degrees += X(k[i], i);
-            }
-        }
+		#define ICNTL(I) icntl[(I)-1]
+		//Output messages suppressed
+		id.ICNTL(1)=-1;
+		id.ICNTL(2)=-1;
+		id.ICNTL(3)=-1;
+		id.ICNTL(4)=0;
+		id.ICNTL(20)=1;
+		id.ICNTL(30)=1;
+		id.ICNTL(14)=200;
 
-        if (!regressionData_.isLocationsByNodes()){
-            MatrixXr X;
-            X = Dsolver.solve(MatrixXr(DMat));
-            if (regressionData_.getCovariates().rows() != 0) {
-                degrees += regressionData_.getCovariates().cols();
-            }
-            for (int i = 0; i<nnodes; ++i) {
-                degrees += X(i,i);
-            }
-        }
-    }
-    _dof[output_index] = degrees;
-    _var[output_index] = 0;
-    //std::cout << "Time required for GCV computation" << std::endl;
-    clock.stop();
+		id.job=6;
+		dmumps_c(&id);
+		id.job=JOB_END;
+		dmumps_c(&id);
+
+		if (myid==0){
+			for (int i=0; i< nlocations; ++i){
+				degrees+=rhs_sparse[i];
+			}
+		}
+		free(rhs_sparse);
+	}
+	// Case 2: Eigen
+	else{
+		MatrixXr X1 = psi_.transpose() * LeftMultiplybyQ(psi_);
+
+		LinearSolvers::EigenSparseLU solver;
+		solver.factorize(R0_);
+		solver.solve(R1_);
+		auto X2 = solver.getSolution();
+
+		MatrixXr X3 = X1 + lambda * R1_.transpose() * X2;
+		Eigen::LLT<MatrixXr> Dsolver(X3);
+
+		auto k = regressionData_.getObservationsIndices();
+
+		if(regressionData_.isLocationsByNodes() && regressionData_.getCovariates().rows() != 0) {
+			degrees += regressionData_.getCovariates().cols();
+
+			// Setup rhs B
+			MatrixXr B;
+			B = MatrixXr::Zero(nnodes,nlocations);
+			// B = I(:,k) * Q
+			for (auto i=0; i<nlocations;++i) {
+				VectorXr ei = VectorXr::Zero(nlocations);
+				ei(i) = 1;
+				VectorXr Qi = LeftMultiplybyQ(ei);
+				for (int j=0; j<nlocations; ++j) {
+					B(k[i], j) = Qi(j);
+				}
+			}
+			// Solve the system TX = B
+			MatrixXr X;
+			X = Dsolver.solve(B);
+			// Compute trace(X(k,:))
+			for (int i = 0; i < k.size(); ++i) {
+				degrees += X(k[i], i);
+			}
+		}
+
+		if (!regressionData_.isLocationsByNodes()){
+			MatrixXr X;
+			X = Dsolver.solve(MatrixXr(X1));
+
+			if (regressionData_.getCovariates().rows() != 0) {
+				degrees += regressionData_.getCovariates().cols();
+			}
+			for (int i = 0; i<nnodes; ++i) {
+				degrees += X(i,i);
+			}
+		}
+	}
+	_dof[output_index] = degrees;
+	_var[output_index] = 0;
+	//std::cout << "Time required for GCV computation" << std::endl;
+	clock.stop();
 }
 
 template<typename InputHandler, typename Integrator, UInt ORDER>
@@ -346,8 +373,7 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::computeDegreesOfFreedomSt
 	var /= nrealizations;
 	var -= mean*mean;
 	_var[output_index]=var;
-	//std::cout << "edf mean = " << mean << std::endl;
-	//Rprintf("Time required for GCV computation\n ");
+
 	clock1.stop();
 }
 
@@ -376,36 +402,36 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::smoothLaplace()
 
 	setPsi();
 
-    Assembler::operKernel(stiff, mesh_, fe, AMat_);
-    Assembler::operKernel(mass, mesh_, fe, MMat_);
+	Assembler::operKernel(stiff, mesh_, fe, R1_);
+	Assembler::operKernel(mass, mesh_, fe, R0_);
 
-    VectorXr rightHandData;
-    getRightHandData(rightHandData);
-    _b = VectorXr::Zero(2*nnodes);
-    _b.topRows(nnodes)=rightHandData;
+	VectorXr rightHandData;
+	getRightHandData(rightHandData);
+	_b = VectorXr::Zero(2*nnodes);
+	_b.topRows(nnodes)=rightHandData;
 
-    _solution.resize(regressionData_.getLambda().size());
-    _dof.resize(regressionData_.getLambda().size());
-    _var.resize(regressionData_.getLambda().size());
+	_solution.resize(regressionData_.getLambda().size());
+	_dof.resize(regressionData_.getLambda().size());
+	_var.resize(regressionData_.getLambda().size());
 
-    for(UInt i = 0; i<regressionData_.getLambda().size(); ++i)
+	for(UInt i = 0; i<regressionData_.getLambda().size(); ++i)
 	{
 
-    	Real lambda = regressionData_.getLambda()[i];
-    	SpMat AMat_lambda = (-lambda)*AMat_;
-    	SpMat MMat_lambda = (-lambda)*MMat_;
-    	this->buildA(psi_, AMat_lambda, MMat_lambda);
+		Real lambda = regressionData_.getLambda()[i];
+		SpMat R1_lambda = (-lambda) * R1_;
+		SpMat R0_lambda = (-lambda)*R0_;
+		this->buildA(psi_, R1_lambda, R0_lambda);
 
-    	//Appling border conditions if necessary
-    	if(regressionData_.getDirichletIndices().size() != 0)
-    		addDirichletBC();
+		//Appling border conditions if necessary
+		if(regressionData_.getDirichletIndices().size() != 0)
+			addDirichletBC();
 
-    	system_factorize();
-    	_solution[i] = this->template system_solve(this->_b);
-    	if(regressionData_.computeDOF())
-    		computeDegreesOfFreedom(i, lambda);
-    	else
-    		_dof[i] = -1;
+		system_factorize();
+		_solution[i] = this->template system_solve(this->_b);
+		if(regressionData_.computeDOF())
+			computeDegreesOfFreedom(i, lambda);
+		else
+			_dof[i] = -1;
 
 	}
 
@@ -435,39 +461,39 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::smoothEllipticPDE()
 
 	setPsi();
 
-    const Real& c = regressionData_.getC();
-    const Eigen::Matrix<Real,2,2>& K = regressionData_.getK();
-    const Eigen::Matrix<Real,2,1>& beta = regressionData_.getBeta();
-    Assembler::operKernel(c*mass+stiff[K]+dot(beta,grad), mesh_, fe, AMat_);
-    Assembler::operKernel(mass, mesh_, fe, MMat_);
+	const Real& c = regressionData_.getC();
+	const Eigen::Matrix<Real,2,2>& K = regressionData_.getK();
+	const Eigen::Matrix<Real,2,1>& beta = regressionData_.getBeta();
+	Assembler::operKernel(c*mass+stiff[K]+dot(beta,grad), mesh_, fe, R1_);
+	Assembler::operKernel(mass, mesh_, fe, R0_);
 
-    VectorXr rightHandData;
-    getRightHandData(rightHandData);
-    _b = VectorXr::Zero(2*nnodes);
-    _b.topRows(nnodes)=rightHandData;
+	VectorXr rightHandData;
+	getRightHandData(rightHandData);
+	_b = VectorXr::Zero(2*nnodes);
+	_b.topRows(nnodes)=rightHandData;
 
-    _solution.resize(regressionData_.getLambda().size());
-    _dof.resize(regressionData_.getLambda().size());
-    _var.resize(regressionData_.getLambda().size());
+	_solution.resize(regressionData_.getLambda().size());
+	_dof.resize(regressionData_.getLambda().size());
+	_var.resize(regressionData_.getLambda().size());
 
-    for(UInt i = 0; i<regressionData_.getLambda().size(); ++i)
+	for(UInt i = 0; i<regressionData_.getLambda().size(); ++i)
 	{
 
-    	Real lambda = regressionData_.getLambda()[i];
-    	SpMat AMat_lambda = (-lambda)*AMat_;
-    	SpMat MMat_lambda = (-lambda)*MMat_;
-    	this->buildA(psi_, AMat_lambda, MMat_lambda);
+		Real lambda = regressionData_.getLambda()[i];
+		SpMat R1_lambda = (-lambda)*R1_;
+		SpMat R0_lambda = (-lambda)*R0_;
+		this->buildA(psi_, R1_lambda, R0_lambda);
 
-    	//Appling border conditions if necessary
-    	if(regressionData_.getDirichletIndices().size() != 0)
-    		addDirichletBC();
+		//Appling border conditions if necessary
+		if(regressionData_.getDirichletIndices().size() != 0)
+			addDirichletBC();
 
-    	system_factorize();
-    	_solution[i] = this->template system_solve(this->_b);
-    	if(regressionData_.computeDOF())
-    		computeDegreesOfFreedom(i, lambda);
-    	else
-    		_dof[i] = -1;
+		system_factorize();
+		_solution[i] = this->template system_solve(this->_b);
+		if(regressionData_.computeDOF())
+			computeDegreesOfFreedom(i, lambda);
+		else
+			_dof[i] = -1;
 	}
 
 }
@@ -499,8 +525,8 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::smoothEllipticPDESpaceVar
 	const Reaction& c = regressionData_.getC();
 	const Diffusivity& K = regressionData_.getK();
 	const Advection& beta = regressionData_.getBeta();
-	Assembler::operKernel(c*mass+stiff[K]+dot(beta,grad), mesh_, fe, AMat_);
-	Assembler::operKernel(mass, mesh_, fe, MMat_);
+	Assembler::operKernel(c*mass+stiff[K]+dot(beta,grad), mesh_, fe, R1_);
+	Assembler::operKernel(mass, mesh_, fe, R0_);
 
 	const ForcingTerm& u = regressionData_.getU();
 	VectorXr forcingTerm;
@@ -522,16 +548,16 @@ void MixedFERegression<InputHandler,Integrator,ORDER>::smoothEllipticPDESpaceVar
 	{
 
 		Real lambda = regressionData_.getLambda()[i];
-		SpMat AMat_lambda = (-lambda)*AMat_;
-		SpMat MMat_lambda = (-lambda)*MMat_;
-		this->buildA(psi_, AMat_lambda, MMat_lambda);
+		SpMat R1_lambda = (-lambda)*R1_;
+		SpMat R0_lambda = (-lambda)*R0_;
+		this->buildA(psi_, R1_lambda, R0_lambda);
 
 		//Appling border conditions if necessary
 		if(regressionData_.getDirichletIndices().size() != 0)
 			addDirichletBC();
 
 		system_factorize();
-    	_solution[i] = this->template system_solve(this->_b);
+		_solution[i] = this->template system_solve(this->_b);
 		if(regressionData_.computeDOF())
 			computeDegreesOfFreedom(i, lambda);
 		else
@@ -561,32 +587,32 @@ MatrixXr MixedFERegression<InputHandler,Integrator,ORDER>::LeftMultiplybyQ(const
 }
 
 template<typename InputHandler, typename Integrator, UInt ORDER>
-void MixedFERegression<InputHandler,Integrator,ORDER>::buildA(const SpMat& Psi,  const SpMat& AMat,  const SpMat& MMat) {
+void MixedFERegression<InputHandler,Integrator,ORDER>::buildA(const SpMat& Psi,  const SpMat& R1,  const SpMat& R0) {
 
 	UInt nnodes = mesh_.num_nodes();
 	
 	SpMat DMat = Psi.transpose()*Psi;
 
 	std::vector<coeff> tripletAll;
-	tripletAll.reserve(DMat.nonZeros() + 2*AMat.nonZeros() + MMat.nonZeros());
+	tripletAll.reserve(DMat.nonZeros() + 2*R1.nonZeros() + R0.nonZeros());
 
 	for (int k=0; k<DMat.outerSize(); ++k)
-	  for (SpMat::InnerIterator it(DMat,k); it; ++it)
-	  {
-		  tripletAll.push_back(coeff(it.row(), it.col(),it.value()));
-	  }
-	for (int k=0; k<MMat.outerSize(); ++k)
-	  for (SpMat::InnerIterator it(MMat,k); it; ++it)
-	  {
-		  tripletAll.push_back(coeff(it.row()+nnodes, it.col()+nnodes,it.value()));
-	  }
-	for (int k=0; k<AMat.outerSize(); ++k)
-	  for (SpMat::InnerIterator it(AMat,k); it; ++it)
+		for (SpMat::InnerIterator it(DMat,k); it; ++it)
+		{
+			tripletAll.push_back(coeff(it.row(), it.col(),it.value()));
+		}
+	for (int k=0; k<R0.outerSize(); ++k)
+		for (SpMat::InnerIterator it(R0,k); it; ++it)
+		{
+			tripletAll.push_back(coeff(it.row()+nnodes, it.col()+nnodes,it.value()));
+		}
+	for (int k=0; k<R1.outerSize(); ++k)
+	  for (SpMat::InnerIterator it(R1,k); it; ++it)
 	  {
 		  tripletAll.push_back(coeff(it.col(), it.row()+nnodes,it.value()));
 	  }
-	for (int k=0; k<AMat.outerSize(); ++k)
-	  for (SpMat::InnerIterator it(AMat,k); it; ++it)
+	for (int k=0; k<R1.outerSize(); ++k)
+	  for (SpMat::InnerIterator it(R1,k); it; ++it)
 	  {
 		  tripletAll.push_back(coeff(it.row()+nnodes, it.col(), it.value()));
 	  }
