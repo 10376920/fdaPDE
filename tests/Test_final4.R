@@ -73,7 +73,6 @@ for (i in 1:n_meshes) {
 }
 
 # COVARIATES, LOC NOT ON NODES 
-#brutto brutto
 if (1) {
     cat("\nCOVARIATES, LOC NOT ON NODES\n\n")
     for (i in 1:n_meshes) {
