@@ -4,9 +4,7 @@ fdaPDE implements a class of spatial regression models in between statistics and
 
 ## Installation
 
-To install the package from the Github repository, use the command `install_github` from the 
-R package `devtools` as follows:
-`install_github("eardi/fdaPDE")`
+For the installation details see the file INSTALL.
 
 ## Examples
 
