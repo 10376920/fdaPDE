@@ -5,7 +5,9 @@
 \title{Spatial regression with differential regularization: stationary and isotropic case (Laplacian)}
 \usage{
 smooth.FEM.basis(locations = NULL, observations, FEMbasis, lambda, 
-       covariates = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE)
+       covariates = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE,
+       GCVmethod = 2, nrealizations = 100, RNGstate = "",
+       solver = "EigenSparseLU", nprocessors = 1, hosts = "")
 }
 \arguments{
 \item{locations}{A #observations-by-2 matrix where each row specifies the spatial coordinates \code{x} and \code{y} of the corresponding observations in the vector \code{observations}.
@@ -31,6 +33,18 @@ Otherwise if only the vector of observations is given, these are consider to be 
 the Generalized Cross Validation criterion, for each value of the smoothing parameter specified in \code{lambda}.}
 
 \item{CPP_CODE}{Boolean. If \code{TRUE} the computation relies on the C++ implementation of the algorithm. This usually ensures a much faster computation.}
+
+\item{GCVmethod}{If set to 1 perform an exact (but possibly slow) computation of the GCV index. If set to 2 approximate the GCV with a stochastic algorithm.}
+
+\item{nrealizations}{The number of realizations to be used in the stochastic algorithm for the estimation of GCV.}
+
+\item{RNGstate}{It should be set to the RNGstate returned by a possible preceeding call to one of the smooth.FEM functions, in order to obtain a new independent estimation of the GCV index}
+
+\item{solver}{A string specifying the solver to be used for the solution of the FEM linear system. Currently the possible values are "EigenSparseLU" and "MumpsSparse".}
+
+\item{nprocessors}{The number of processors to be employed if the MUMPS solver is selected}
+
+\item{hosts}{A string with the path of the hostfile to be used by MUMPS when run in parallel}
 }
 \value{
 A list with the following variables:
@@ -41,6 +55,8 @@ the smoothing parameter is equal to \code{lambda[j]}.}
 \item{\code{edf}}{If GCV is \code{TRUE}, a scalar or vector with the trace of the smoothing matrix for each value of the smoothing parameter specified in \code{lambda}.}
 \item{\code{stderr}}{If GCV is \code{TRUE}, a scalar or vector with the estimate of the standard deviation of the error for each value of the smoothing parameter specified in \code{lambda}.}
 \item{\code{GCV}}{If GCV is \code{TRUE}, a  scalar or vector with the value of the GCV criterion for each value of the smoothing parameter specified in \code{lambda}.}
+\item{\code{var}}{If GCV is \code{TRUE} and GCVmethod = 2, a scalar or vector with the sample variance of the stochastic edf estimator for each value of the smoothing parameter specified in \code{lambda}.}
+\item{\code{RNGstate}}{The state of the C++ random engine generator on exit from the function. It can be useful as an input parameter in subsequent calls.}
 }
 \description{
 This function implements a spatial regression model with differential regularization; isotropic and stationary case. In particular, the regularizing term involves the Laplacian of the spatial field. Space-varying covariates can be included in the model. The technique accurately handle data distributed over irregularly shaped domains. Moreover, various conditions can be imposed at the domain boundaries.

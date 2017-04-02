@@ -16,6 +16,12 @@
 #' @param GCV Boolean. If \code{TRUE} the following quantities are computed: the trace of the smoothing matrix, the estimated error standard deviation,  and 
 #'        the Generalized Cross Validation criterion, for each value of the smoothing parameter specified in \code{lambda}.
 #' @param CPP_CODE Boolean. If \code{TRUE} the computation relies on the C++ implementation of the algorithm. This usually ensures a much faster computation.
+#' @param GCVmethod If set to 1 perform an exact (but possibly slow) computation of the GCV index. If set to 2 approximate the GCV with a stochastic algorithm.
+#' @param nrealizations The number of realizations to be used in the stochastic algorithm for the estimation of GCV.
+#' @param RNGstate It should be set to the RNGstate returned by a possible preceeding call to one of the smooth.FEM functions, in order to obtain a new independent estimation of the GCV index
+#' @param solver A string specifying the solver to be used for the solution of the FEM linear system. Currently the possible values are "EigenSparseLU" and "MumpsSparse".
+#' @param nprocessors The number of processors to be employed if the MUMPS solver is selected
+#' @param hosts A string with the path of the hostfile to be used by MUMPS when run in parallel
 #' @return A list with the following variables:
 #' \item{\code{fit.FEM}}{A \code{FEM} object that represents the fitted spatial field.}
 #' \item{\code{PDEmisfit.FEM}}{A \code{FEM} object that represents the Laplacian of the estimated spatial field.}
@@ -24,9 +30,13 @@
 #' \item{\code{edf}}{If GCV is \code{TRUE}, a scalar or vector with the trace of the smoothing matrix for each value of the smoothing parameter specified in \code{lambda}.}
 #' \item{\code{stderr}}{If GCV is \code{TRUE}, a scalar or vector with the estimate of the standard deviation of the error for each value of the smoothing parameter specified in \code{lambda}.}
 #' \item{\code{GCV}}{If GCV is \code{TRUE}, a  scalar or vector with the value of the GCV criterion for each value of the smoothing parameter specified in \code{lambda}.}
+#' \item{\code{var}}{If GCV is \code{TRUE} and GCVmethod = 2, a scalar or vector with the sample variance of the stochastic edf estimator for each value of the smoothing parameter specified in \code{lambda}.}
+#' \item{\code{RNGstate}}{The state of the C++ random engine generator on exit from the function. It can be useful as an input parameter in subsequent calls.}
 #' @description This function implements a spatial regression model with differential regularization; isotropic and stationary case. In particular, the regularizing term involves the Laplacian of the spatial field. Space-varying covariates can be included in the model. The technique accurately handle data distributed over irregularly shaped domains. Moreover, various conditions can be imposed at the domain boundaries.
 #' @usage smooth.FEM.basis(locations = NULL, observations, FEMbasis, lambda, 
-#'        covariates = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE)
+#'        covariates = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE,
+#'        GCVmethod = 2, nrealizations = 100, RNGstate = "",
+#'        solver = "EigenSparseLU", nprocessors = 1, hosts = "")
 #' @seealso \code{\link{smooth.FEM.PDE.basis}}, \code{\link{smooth.FEM.PDE.sv.basis}}
 #' @references Sangalli, L.M., Ramsay, J.O. & Ramsay, T.O., 2013. Spatial spline regression models. Journal of the Royal Statistical Society. Series B: Statistical Methodology, 75(4), pp. 681-703.
 #' @examples
@@ -143,6 +153,12 @@ smooth.FEM.basis<-function(locations = NULL, observations, FEMbasis, lambda, cov
 #' @param GCV Boolean. If \code{TRUE} the following quantities are computed: the trace of the smoothing matrix, the estimated error standard deviation,  and 
 #'        the Generalized Cross Validation criterion, for each value of the smoothing parameter specified in \code{lambda}.
 #' @param CPP_CODE Boolean. If \code{TRUE} the computation relies on the C++ implementation of the algorithm. This usually ensures a much faster computation.
+#' @param GCVmethod If set to 1 perform an exact (but possibly slow) computation of the GCV index. If set to 2 approximate the GCV with a stochastic algorithm.
+#' @param nrealizations The number of realizations to be used in the stochastic algorithm for the estimation of GCV.
+#' @param RNGstate It should be set to the RNGstate returned by a possible preceeding call to one of the smooth.FEM functions, in order to obtain a new independent estimation of the GCV index
+#' @param solver A string specifying the solver to be used for the solution of the FEM linear system. Currently the possible values are "EigenSparseLU" and "MumpsSparse".
+#' @param nprocessors The number of processors to be employed if the MUMPS solver is selected
+#' @param hosts A string with the path of the hostfile to be used by MUMPS when run in parallel
 #' @return A list with the following variables:
 #'          \item{\code{fit.FEM}}{A \code{FEM} object that represents the fitted spatial field.}
 #'          \item{\code{PDEmisfit.FEM}}{A \code{FEM} object that represents the PDE misfit for the estimated spatial field.}
@@ -151,10 +167,13 @@ smooth.FEM.basis<-function(locations = NULL, observations, FEMbasis, lambda, cov
 #'          \item{\code{edf}}{If GCV is \code{TRUE}, a scalar or vector with the trace of the smoothing matrix for each value of the smoothing parameter specified in \code{lambda}.}
 #'          \item{\code{stderr}}{If GCV is \code{TRUE}, a scalar or vector with the estimate of the standard deviation of the error for each value of the smoothing parameter specified in \code{lambda}.}
 #'          \item{\code{GCV}}{If GCV is \code{TRUE}, a  scalar or vector with the value of the GCV criterion for each value of the smoothing parameter specified in \code{lambda}.}
+#' \item{\code{var}}{If GCV is \code{TRUE} and GCVmethod = 2, a scalar or vector with the sample variance of the stochastic edf estimator for each value of the smoothing parameter specified in \code{lambda}.}
+#' \item{\code{RNGstate}}{The state of the C++ random engine generator on exit from the function. It can be useful as an input parameter in subsequent calls.}
 #' @description This function implements a spatial regression model with differential regularization; anysotropic case. In particular, the regularizing term involves a second order elliptic PDE, that models the space-variation of the phenomenon. Space-varying covariates can be included in the model. The technique accurately handle data distributed over irregularly shaped domains. Moreover, various conditions can be imposed at the domain boundaries.
 #' @usage smooth.FEM.PDE.basis(locations = NULL, observations, FEMbasis, 
 #'        lambda, PDE_parameters, covariates = NULL, BC = NULL, GCV = FALSE, 
-#'        CPP_CODE = TRUE)
+#'        CPP_CODE = TRUE, GCVmethod = 2, nrealizations = 100, RNGstate = "",
+#'        solver = "EigenSparseLU", nprocessors = 1, hosts = ""))
 #' @seealso \code{\link{smooth.FEM.basis}}, \code{\link{smooth.FEM.PDE.sv.basis}}
 #' @references Azzimonti, L., Sangalli, L.M., Secchi, P., Domanin, M., and Nobile, F., 2014. Blood flow velocity field estimation via spatial regression with PDE penalization Blood flow velocity field estimation via spatial regression with PDE penalization. DOI. 10.1080/01621459.2014.946036. \cr
 #'  Azzimonti, L., Nobile, F., Sangalli, L.M., and Secchi, P., 2014. Mixed Finite Elements for Spatial Regression with PDE Penalization. SIAM/ASA Journal on Uncertainty Quantification, 2(1), pp.305-335. 
@@ -272,6 +291,12 @@ smooth.FEM.PDE.basis<-function(locations = NULL, observations, FEMbasis, lambda,
 #' @param GCV Boolean. If \code{TRUE} the following quantities are computed: the trace of the smoothing matrix, the estimated error standard deviation,  and 
 #'        the Generalized Cross Validation criterion, for each value of the smoothing parameter specified in \code{lambda}.
 #' @param CPP_CODE Boolean. If \code{TRUE} the computation relies on the C++ implementation of the algorithm. This usually ensures a much faster computation.
+#' @param GCVmethod If set to 1 perform an exact (but possibly slow) computation of the GCV index. If set to 2 approximate the GCV with a stochastic algorithm.
+#' @param nrealizations The number of realizations to be used in the stochastic algorithm for the estimation of GCV.
+#' @param RNGstate It should be set to the RNGstate returned by a possible preceeding call to one of the smooth.FEM functions, in order to obtain a new independent estimation of the GCV index
+#' @param solver A string specifying the solver to be used for the solution of the FEM linear system. Currently the possible values are "EigenSparseLU" and "MumpsSparse".
+#' @param nprocessors The number of processors to be employed if the MUMPS solver is selected
+#' @param hosts A string with the path of the hostfile to be used by MUMPS when run in parallel
 #' @return A list with the following variables:
 #'          \item{\code{fit.FEM}}{A \code{FEM} object that represents the fitted spatial field.}
 #'          \item{\code{PDEmisfit.FEM}}{A \code{FEM} object that represents the PDE misfit for the estimated spatial field.}
@@ -280,10 +305,13 @@ smooth.FEM.PDE.basis<-function(locations = NULL, observations, FEMbasis, lambda,
 #'          \item{\code{edf}}{If GCV is \code{TRUE}, a scalar or vector with the trace of the smoothing matrix for each value of the smoothing parameter specified in \code{lambda}.}
 #'          \item{\code{stderr}}{If GCV is \code{TRUE}, a scalar or vector with the estimate of the standard deviation of the error for each value of the smoothing parameter specified in \code{lambda}.}
 #'          \item{\code{GCV}}{If GCV is \code{TRUE}, a  scalar or vector with the value of the GCV criterion for each value of the smoothing parameter specified in \code{lambda}.}
+#' \item{\code{var}}{If GCV is \code{TRUE} and GCVmethod = 2, a scalar or vector with the sample variance of the stochastic edf estimator for each value of the smoothing parameter specified in \code{lambda}.}
+#' \item{\code{RNGstate}}{The state of the C++ random engine generator on exit from the function. It can be useful as an input parameter in subsequent calls.}
 #' @description This function implements a spatial regression model with differential regularization; anysotropic and non-stationary case. In particular, the regularizing term involves a second order elliptic PDE with space-varying coefficients, that models the space-variation of the phenomenon. Space-varying covariates can be included in the model. The technique accurately handle data distributed over irregularly shaped domains. Moreover, various conditions can be imposed at the domain boundaries.
 #' @usage smooth.FEM.PDE.sv.basis(locations = NULL, observations, FEMbasis, 
 #'  lambda, PDE_parameters, covariates = NULL, BC = NULL, GCV = FALSE, 
-#'  CPP_CODE = TRUE)
+#'  CPP_CODE = TRUE, GCVmethod = 2, nrealizations = 100, RNGstate = "",
+#'  solver = "EigenSparseLU", nprocessors = 1, hosts = ""))
 #' @seealso \code{\link{smooth.FEM.basis}}, \code{\link{smooth.FEM.PDE.basis}}
 #' @references Azzimonti, L., Sangalli, L.M., Secchi, P., Domanin, M., and Nobile, F., 2014. Blood flow velocity field estimation via spatial regression with PDE penalization Blood flow velocity field estimation via spatial regression with PDE penalization. DOI. 10.1080/01621459.2014.946036. \cr
 #'  Azzimonti, L., Nobile, F., Sangalli, L.M., and Secchi, P., 2014. Mixed Finite Elements for Spatial Regression with PDE Penalization. SIAM/ASA Journal on Uncertainty Quantification, 2(1), pp.305-335. 

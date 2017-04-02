@@ -18,7 +18,7 @@ library:
 	R CMD SHLIB ${SRCS_SHLIB} -o fdaPDE.so
 
 child:
-	$(CXX) -std=c++11 $(MUMPS_I) $(PKG_LIBS) ${DIR_MUMPS_SPARSE}/child.cpp -o child
+	$(CXX) -std=c++11 $(MUMPS_I) ${DIR_MUMPS_SPARSE}/child.cpp $(PKG_LIBS) -o child
 
 clean:
 	rm -f *.o ${DIR_MUMPS_SPARSE}/*.o ${DIR_EIGEN_SPARSE_LU}/*.o
