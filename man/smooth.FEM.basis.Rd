@@ -55,14 +55,14 @@ the smoothing parameter is equal to \code{lambda[j]}.}
 \item{\code{edf}}{If GCV is \code{TRUE}, a scalar or vector with the trace of the smoothing matrix for each value of the smoothing parameter specified in \code{lambda}.}
 \item{\code{stderr}}{If GCV is \code{TRUE}, a scalar or vector with the estimate of the standard deviation of the error for each value of the smoothing parameter specified in \code{lambda}.}
 \item{\code{GCV}}{If GCV is \code{TRUE}, a  scalar or vector with the value of the GCV criterion for each value of the smoothing parameter specified in \code{lambda}.}
-\item{\code{var}}{If GCV is \code{TRUE} and GCVmethod = 2, a scalar or vector with the sample variance of the stochastic edf estimator for each value of the smoothing parameter specified in \code{lambda}.}
+\item{\code{var}}{If GCV is \code{TRUE} and GCVmethod = 2, a scalar or vector with the sample variance of the realizations of the stochastic edf estimator for each value of the smoothing parameter specified in \code{lambda}.}
 \item{\code{RNGstate}}{The state of the C++ random engine generator on exit from the function. It can be useful as an input parameter in subsequent calls.}
 }
 \description{
 This function implements a spatial regression model with differential regularization; isotropic and stationary case. In particular, the regularizing term involves the Laplacian of the spatial field. Space-varying covariates can be included in the model. The technique accurately handle data distributed over irregularly shaped domains. Moreover, various conditions can be imposed at the domain boundaries.
 }
 \examples{
-library(fdaPDE)
+library(fdaPDE2)
 ## Load the Meuse data and a domain boundary for these data
 data(MeuseData)
 data(MeuseBorder)
@@ -76,7 +76,8 @@ FEMbasis = create.FEM.basis(mesh)
 data = log(MeuseData[,"zinc"])
 lambda = 10^3.5
 ZincMeuse = smooth.FEM.basis(observations = data, 
-                             FEMbasis = FEMbasis, lambda = lambda)
+                             FEMbasis = FEMbasis, lambda = lambda,
+                             GCV=TRUE, GCVmethod=2, nrealizations=200)
 ## Plot the estimated spatial field 
 plot(ZincMeuse$fit.FEM)
 # Now repeat the analysis using as covariates the square root of the log-distance 
@@ -85,7 +86,8 @@ desmat = matrix(1,nrow=nrow(MeuseData),ncol=2)
 desmat[,1] = sqrt(MeuseData[,"dist.log(m)"])
 desmat[,2] = MeuseData[,"elev"]
 ZincMeuseCovar = smooth.FEM.basis(observations = data, covariates = desmat, 
-                                   FEMbasis = FEMbasis, lambda = lambda)
+                                  FEMbasis = FEMbasis, lambda = lambda,
+                                  GCV=TRUE, GCVmethod=1, nrealizations=200)
 # Plot of the non parametric part (f) of the regression model y_i = beta_1 x_i1 + beta_2 x_i2 + f
 plot(ZincMeuseCovar$fit.FEM)
 # Print covariates' regression coefficients

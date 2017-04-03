@@ -66,7 +66,7 @@ A list with the following variables:
          \item{\code{edf}}{If GCV is \code{TRUE}, a scalar or vector with the trace of the smoothing matrix for each value of the smoothing parameter specified in \code{lambda}.}
          \item{\code{stderr}}{If GCV is \code{TRUE}, a scalar or vector with the estimate of the standard deviation of the error for each value of the smoothing parameter specified in \code{lambda}.}
          \item{\code{GCV}}{If GCV is \code{TRUE}, a  scalar or vector with the value of the GCV criterion for each value of the smoothing parameter specified in \code{lambda}.}
-\item{\code{var}}{If GCV is \code{TRUE} and GCVmethod = 2, a scalar or vector with the sample variance of the stochastic edf estimator for each value of the smoothing parameter specified in \code{lambda}.}
+\item{\code{var}}{If GCV is \code{TRUE} and GCVmethod = 2, a scalar or vector with the sample variance of the realizations of the stochastic edf estimator for each value of the smoothing parameter specified in \code{lambda}.}
 \item{\code{RNGstate}}{The state of the C++ random engine generator on exit from the function. It can be useful as an input parameter in subsequent calls.}
 }
 \description{
