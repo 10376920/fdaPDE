@@ -76,24 +76,11 @@ for (i in 1:n_meshes) {
 }
 
 # COVARIATES, LOC NOT ON NODES 
-#brutto brutto
 if (1) {
     cat("\nCOVARIATES, LOC NOT ON NODES\n\n")
     for (i in 1:n_meshes) {
         cat("------------------------   ")
         cat("grid: ", N[i], "x", N[i], "nodes\n")
-#        cat("Exact computation \n")
-#        output_CPP_exact =
-#        smooth.FEM.basis(observations = observations[[i]],
-#                         locations=locations[[i]],
-#                         FEMbasis = FEMbasis[[i]],
-#                         lambda = lambda,
-#                         covariates=covariates[[i]],
-#                         GCV = TRUE,
-#                         CPP_CODE = TRUE,
-#                         GCVmethod = 1)
-#        cat("edf = ", output_CPP_exact$edf)
-#        cat ("\n")
         cat("Stochastic computation \n")
         output_CPP_stochastic =
         smooth.FEM.basis(observations = observations[[i]],
